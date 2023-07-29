@@ -134,6 +134,7 @@ public class EditingInterface extends TrainerAccountInterface {
         Trainer trainer = chHelper.getTrainer();
         if (value.equals(BACK)) {
             chHelper.update();
+            changing = false;
             return startChanging(chatId);
         }
         if (chHelper.login) {
