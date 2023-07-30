@@ -1,13 +1,23 @@
 package com.caringcoachtelegrambot.blocks.parents;
 
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
+import com.caringcoachtelegrambot.exceptions.NotReturnedResponseException;
+import com.caringcoachtelegrambot.services.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
+import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
+import com.pengrad.telegrambot.response.SendResponse;
+import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 
-public abstract class AccountBlockable<T extends Helper> extends PaddedBlockable<T> {
+import java.util.*;
 
-    public AccountBlockable(TelegramSender telegramSender) {
-        super(telegramSender);
+@Getter
+public abstract class AccountBlockable<H extends Helper> extends PaddedBlockable<H> {
+
+    public AccountBlockable(TelegramSender telegramSender,
+                            ServiceKeeper serviceKeeper) {
+        super(telegramSender, serviceKeeper);
     }
 
     @Override

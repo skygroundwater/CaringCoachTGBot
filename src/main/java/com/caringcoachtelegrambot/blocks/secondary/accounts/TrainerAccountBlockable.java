@@ -1,7 +1,7 @@
-package com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts;
+package com.caringcoachtelegrambot.blocks.secondary.accounts;
 
 import com.caringcoachtelegrambot.blocks.parents.AccountBlockable;
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.TrainerHelper;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.services.*;
 import com.caringcoachtelegrambot.utils.TelegramSender;
@@ -19,38 +19,16 @@ import java.util.List;
 @Component
 @Getter
 public class TrainerAccountBlockable extends AccountBlockable<TrainerHelper> {
-
-    private final QuestionnaireService questionnaireService;
-
-    private final FAQService faqService;
-
-    private final OnlineTrainingService onlineTrainingService;
-
-    private final TrainerService trainerService;
-
-    private final AthleteService athleteService;
-
     @Autowired
     public TrainerAccountBlockable(TelegramSender telegramSender,
-                                   QuestionnaireService questionnaireService,
-                                   FAQService faqService,
-                                   OnlineTrainingService onlineTrainingService,
-                                   AthleteService athleteService,
-                                   TrainerService trainerService) {
-        super(telegramSender);
-        this.questionnaireService = questionnaireService;
-        this.faqService = faqService;
-        this.onlineTrainingService = onlineTrainingService;
-        this.athleteService = athleteService;
-        this.trainerService = trainerService;
+                                   ServiceKeeper serviceKeeper) {
+        super(telegramSender, serviceKeeper);
     }
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
         helpers().put(chatId, new TrainerHelper(
-                questionnaireService, faqService,
-                sender(), this,
-                onlineTrainingService, athleteService, trainerService));
+                sender(), getServiceKeeper(), this));
         ReplyKeyboardMarkup markup = markup();
         for (KeyboardButton button : buttonsForTrainer()) {
             markup.addRow(button);

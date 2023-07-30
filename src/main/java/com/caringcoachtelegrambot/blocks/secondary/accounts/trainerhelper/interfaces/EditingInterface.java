@@ -1,6 +1,6 @@
-package com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.interfaces;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces;
 
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.TrainerHelper;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Trainer;
 import com.pengrad.telegrambot.model.Message;
@@ -150,7 +150,7 @@ public class EditingInterface extends TrainerAccountInterface {
         } else if (chHelper.cause) {
             trainer.setCause(value);
         }
-        trainerService().setTrainer(trainer);
+        trainerService().put(trainer);
         changing = false;
         chHelper.update();
         return startChanging(chatId);
@@ -159,7 +159,7 @@ public class EditingInterface extends TrainerAccountInterface {
     private SendResponse saveNewPassword(Long chatId, String value, Trainer trainer) {
         if (value.equals(chHelper.getNewPass())) {
             trainer.setPassword(encoder().encode(value));
-            trainerService().setTrainer(trainer);
+            trainerService().put(trainer);
             chHelper.update();
             sender().sendResponse(new SendMessage(chatId, "Пароль успешно изменён"));
             changing = false;

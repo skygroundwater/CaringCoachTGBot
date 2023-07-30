@@ -1,15 +1,13 @@
 package com.caringcoachtelegrambot.models;
 
+import com.caringcoachtelegrambot.models.inserts.CaringCoachBotModel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
-import lombok.Data;
-import lombok.Builder;
-import lombok.ToString;
+import lombok.*;
 
+@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "certificates")
 @NoArgsConstructor
@@ -17,7 +15,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @Builder
 @ToString
-public class Certificate {
+public class Certificate extends CaringCoachBotModel {
 
     @Id
     private Long id;

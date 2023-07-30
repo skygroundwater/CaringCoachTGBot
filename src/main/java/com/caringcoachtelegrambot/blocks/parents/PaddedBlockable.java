@@ -1,6 +1,7 @@
 package com.caringcoachtelegrambot.blocks.parents;
 
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
+import com.caringcoachtelegrambot.services.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Setter;
@@ -8,8 +9,9 @@ import lombok.Setter;
 @Setter
 public abstract class PaddedBlockable<T extends Helper> extends SimpleBlockable<T> implements BlockableForNextStep {
 
-    public PaddedBlockable(TelegramSender telegramSender) {
-        super(telegramSender);
+    public PaddedBlockable(TelegramSender telegramSender,
+                           ServiceKeeper serviceKeeper) {
+        super(telegramSender, serviceKeeper);
     }
 
     @Override
@@ -28,7 +30,7 @@ public abstract class PaddedBlockable<T extends Helper> extends SimpleBlockable<
     }
 
     @Override
-    public final SendResponse goDownTwoSteps(Long chatId){
+    public final SendResponse goDownTwoSteps(Long chatId) {
         return goToBack(chatId);
     }
 }

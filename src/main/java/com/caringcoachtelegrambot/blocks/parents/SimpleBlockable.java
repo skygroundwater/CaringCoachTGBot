@@ -3,16 +3,19 @@ package com.caringcoachtelegrambot.blocks.parents;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Node;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
+import com.caringcoachtelegrambot.services.*;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
+import lombok.Getter;
 import lombok.Setter;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Setter
+@Getter
 public abstract class SimpleBlockable<T extends Helper> implements BlockableForBackStep {
 
     private final TelegramSender sender;
@@ -21,7 +24,11 @@ public abstract class SimpleBlockable<T extends Helper> implements BlockableForB
 
     private final ConcurrentMap<Long, T> helpers;
 
-    public SimpleBlockable(TelegramSender sender) {
+    private final ServiceKeeper serviceKeeper;
+
+    public SimpleBlockable(TelegramSender sender,
+                           ServiceKeeper serviceKeeper) {
+        this.serviceKeeper = serviceKeeper;
         this.sender = sender;
         this.node = new Node();
         this.helpers = new ConcurrentHashMap<>();
@@ -52,6 +59,30 @@ public abstract class SimpleBlockable<T extends Helper> implements BlockableForB
         return node;
     }
 
+    public final OnlineTrainingService onlineTrainingService() {
+        return serviceKeeper.getOnlineTrainingService();
+    }
+
+    public final AthleteService athleteService() {
+        return serviceKeeper.getAthleteService();
+    }
+
+    public final FAQService faqService() {
+        return serviceKeeper.getFaqService();
+    }
+
+    public final QuestionnaireService questionnaireService() {
+        return serviceKeeper.getQuestionnaireService();
+    }
+
+    public final CertificateService certificateService() {
+        return serviceKeeper.getCertificateService();
+    }
+
+    public final TrainerService trainerService() {
+        return serviceKeeper.getTrainerService();
+    }
+
     @Override
     public final boolean checkIn(Long chatId) {
         T helper = helpers.get(chatId);
@@ -63,7 +94,7 @@ public abstract class SimpleBlockable<T extends Helper> implements BlockableForB
     @Override
     public final SendResponse goToBack(Long chatId) {
         Helper helper = helpers.get(chatId);
-        if(helper != null) {
+        if (helper != null) {
             helper.setIn(false);
         }
         return node.getPrevBlockable().uniqueStartBlockMessage(chatId);

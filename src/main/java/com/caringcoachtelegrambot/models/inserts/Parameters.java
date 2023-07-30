@@ -8,9 +8,9 @@ import lombok.*;
 @Data
 @AllArgsConstructor
 @ToString
-@EqualsAndHashCode
+@EqualsAndHashCode(callSuper = false)
 @MappedSuperclass
-public abstract class Parameters {
+public abstract class Parameters extends CaringCoachBotModel {
 
     @Column(name = "first_name")
     private String firstName;

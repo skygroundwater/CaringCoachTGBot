@@ -3,6 +3,7 @@ package com.caringcoachtelegrambot.blocks.secondary;
 import com.caringcoachtelegrambot.blocks.parents.SimpleBlockable;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
+import com.caringcoachtelegrambot.services.ServiceKeeper;
 import com.caringcoachtelegrambot.services.TrainerService;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
@@ -17,17 +18,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class MeetingBlockable extends SimpleBlockable<MeetingBlockable.MeetingHelper> {
 
-    private final TrainerService trainerService;
-
-    public MeetingBlockable(TrainerService trainerService,
+    public MeetingBlockable(ServiceKeeper serviceKeeper,
                             TelegramSender telegramSender) {
-        super(telegramSender);
-        this.trainerService = trainerService;
+        super(telegramSender, serviceKeeper);
     }
 
     @EqualsAndHashCode(callSuper = true)
     @Data
-    public static class MeetingHelper extends Helper {}
+    public static class MeetingHelper extends Helper {
+    }
 
     @Override
     public SendResponse process(Long chatId, Message message) {
@@ -58,19 +57,17 @@ public class MeetingBlockable extends SimpleBlockable<MeetingBlockable.MeetingHe
 
     @Override
     public ReplyKeyboardMarkup markup() {
-        return new ReplyKeyboardMarkup(
+        return backMarkup().addRow(
                 new KeyboardButton("Обо мне"),
-                new KeyboardButton("Мои регалии"))
-                .addRow(new KeyboardButton("Тебе нужна работа со мной, если..."))
-                .addRow("Назад");
+                new KeyboardButton("Мои регалии"));
     }
 
     private SendResponse about(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, trainerService.getTrainer().getAbout()));
+        return sender().sendResponse(new SendMessage(chatId, trainerService().getTrainer().getAbout()));
     }
 
     private SendResponse cause(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, trainerService.getTrainer().getCause()));
+        return sender().sendResponse(new SendMessage(chatId, trainerService().getTrainer().getCause()));
     }
 
     private SendResponse regalia(Long chatId) {

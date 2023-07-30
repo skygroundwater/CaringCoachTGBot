@@ -1,5 +1,6 @@
 package com.caringcoachtelegrambot.models;
 
+import com.caringcoachtelegrambot.models.inserts.CaringCoachBotModel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -14,8 +15,8 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@EqualsAndHashCode
-public class FAQ {
+@EqualsAndHashCode(callSuper = false)
+public class FAQ extends CaringCoachBotModel {
 
     @Id
     @Column(name = "question")

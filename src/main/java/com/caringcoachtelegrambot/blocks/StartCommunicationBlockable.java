@@ -11,6 +11,7 @@ import com.caringcoachtelegrambot.blocks.secondary.AuthorizationBlockable;
 import com.caringcoachtelegrambot.blocks.secondary.RegistrationBlockable;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
+import com.caringcoachtelegrambot.services.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
@@ -46,8 +47,9 @@ public class StartCommunicationBlockable extends PaddedBlockable<StartCommunicat
                                        PriceListBlockable priceListBlockable,
                                        RegistrationBlockable registrationBlockable,
                                        AuthorizationBlockable authorizationBlockable,
-                                       TelegramSender telegramSender) {
-        super(telegramSender);
+                                       TelegramSender telegramSender,
+                                       ServiceKeeper serviceKeeper) {
+        super(telegramSender, serviceKeeper);
         this.meetingBlockable = meetingBlockable;
         this.questionnaireBlockable = questionnaireBlockable;
         this.faqBlockable = faqBlockable;

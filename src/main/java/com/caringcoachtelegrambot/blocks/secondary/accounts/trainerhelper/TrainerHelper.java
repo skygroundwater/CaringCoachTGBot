@@ -1,12 +1,12 @@
-package com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper;
 
 import com.caringcoachtelegrambot.blocks.parents.Blockable;
-import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.TrainerAccountBlockable;
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.interfaces.EditingInterface;
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.interfaces.FAQInterface;
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.interfaces.QuestionnaireInterface;
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.interfaces.TrainingPlanInterface;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.AccountHelper;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.TrainerAccountBlockable;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces.EditingInterface;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces.FAQInterface;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces.QuestionnaireInterface;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces.TrainingPlanInterface;
 import com.caringcoachtelegrambot.services.*;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
@@ -16,21 +16,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class TrainerHelper extends Helper {
+public class TrainerHelper extends AccountHelper {
 
     private final Blockable trainerAccountBlockable;
-
-    private final QuestionnaireService questionnaireService;
-
-    private final FAQService faqService;
-
-    private final TrainerService trainerService;
-
-    private final OnlineTrainingService onlineTrainingService;
-
-    private final AthleteService athleteService;
-
-    private final TelegramSender sender;
 
     private final QuestionnaireInterface questionnaireInterface;
 
@@ -50,21 +38,11 @@ public class TrainerHelper extends Helper {
 
     private boolean accountEditing;
 
-    public TrainerHelper(QuestionnaireService questionnaireService,
-                         FAQService faqService,
-                         TelegramSender sender,
-                         TrainerAccountBlockable trainerAccountBlockable,
-                         OnlineTrainingService onlineTrainingService,
-                         AthleteService athleteService,
-                         TrainerService trainerService) {
-        super();
+    public TrainerHelper(TelegramSender sender,
+                         ServiceKeeper serviceKeeper,
+                         TrainerAccountBlockable trainerAccountBlockable) {
+        super(serviceKeeper, sender);
         this.trainerAccountBlockable = trainerAccountBlockable;
-        this.questionnaireService = questionnaireService;
-        this.faqService = faqService;
-        this.athleteService = athleteService;
-        this.trainerService = trainerService;
-        this.sender = sender;
-        this.onlineTrainingService = onlineTrainingService;
         questionnaireInterface = new QuestionnaireInterface(this);
         trainingPlanInterface = new TrainingPlanInterface(this);
         faqInterface = new FAQInterface(this);

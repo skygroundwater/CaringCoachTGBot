@@ -3,6 +3,7 @@ package com.caringcoachtelegrambot.blocks.secondary;
 import com.caringcoachtelegrambot.blocks.parents.SimpleBlockable;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
+import com.caringcoachtelegrambot.services.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
@@ -17,8 +18,9 @@ import static com.caringcoachtelegrambot.utils.Constants.BACK;
 @Component
 public class PriceListBlockable extends SimpleBlockable<PriceListBlockable.PriceListHelper> {
 
-    public PriceListBlockable(TelegramSender telegramSender) {
-        super(telegramSender);
+    public PriceListBlockable(TelegramSender telegramSender,
+                              ServiceKeeper serviceKeeper) {
+        super(telegramSender, serviceKeeper);
     }
 
     @EqualsAndHashCode(callSuper = true)
@@ -57,10 +59,9 @@ public class PriceListBlockable extends SimpleBlockable<PriceListBlockable.Price
 
     @Override
     public ReplyKeyboardMarkup markup() {
-        return new ReplyKeyboardMarkup("Персональное ведение")
+        return backMarkup().addRow("Персональное ведение")
                 .addRow("Разовая тренировка")
-                .addRow("Абонементы")
-                .addRow(BACK);
+                .addRow("Абонементы");
     }
 
     private SendResponse personalManagement(Long chatId) {

@@ -2,9 +2,9 @@ package com.caringcoachtelegrambot.blocks.secondary;
 
 import com.caringcoachtelegrambot.blocks.parents.PaddedBlockable;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.PopularFAQBlockable;
 import com.caringcoachtelegrambot.models.FAQ;
 import com.caringcoachtelegrambot.services.FAQService;
+import com.caringcoachtelegrambot.services.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
@@ -17,12 +17,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class FAQBlockable extends PaddedBlockable<FAQBlockable.FAQHelper> {
 
-    private final FAQService faqService;
-
-    public FAQBlockable(FAQService faqService, TelegramSender telegramSender,
+    public FAQBlockable(ServiceKeeper serviceKeeper,
+                        TelegramSender telegramSender,
                         PopularFAQBlockable popularFAQBlockable) {
-        super(telegramSender);
-        this.faqService = faqService;
+        super(telegramSender, serviceKeeper);
         node().setNextBlockable(popularFAQBlockable);
         popularFAQBlockable.setPrevBlockable(this);
     }
@@ -73,9 +71,8 @@ public class FAQBlockable extends PaddedBlockable<FAQBlockable.FAQHelper> {
 
     @Override
     public ReplyKeyboardMarkup markup() {
-        return new ReplyKeyboardMarkup("Вы можете задать свой вопрос")
-                .addRow("Популярные вопросы")
-                .addRow("Назад").oneTimeKeyboard(true);
+        return backMarkup().addRow("Вы можете задать свой вопрос")
+                .addRow("Популярные вопросы").oneTimeKeyboard(true);
     }
 
     private SendResponse ask(Long chatId) {
@@ -86,7 +83,7 @@ public class FAQBlockable extends PaddedBlockable<FAQBlockable.FAQHelper> {
 
     private SendResponse stopAsking(Long chatId, String question) {
         helpers().get(chatId).setAsking(false);
-        faqService.postFAQ(new FAQ(question, chatId));
+        faqService().post(new FAQ(question, chatId));
         return uniqueStartBlockMessage(chatId);
     }
 }

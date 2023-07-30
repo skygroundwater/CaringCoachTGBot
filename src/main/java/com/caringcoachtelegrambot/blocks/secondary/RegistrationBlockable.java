@@ -9,6 +9,7 @@ import com.caringcoachtelegrambot.models.Athlete;
 import com.caringcoachtelegrambot.models.Questionnaire;
 import com.caringcoachtelegrambot.services.AthleteService;
 import com.caringcoachtelegrambot.services.QuestionnaireService;
+import com.caringcoachtelegrambot.services.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
@@ -22,19 +23,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class RegistrationBlockable extends PaddedBlockable<RegistrationBlockable.RegistrationHelper> {
 
-    private final QuestionnaireService questionnaireService;
-
-    private final AthleteService athleteService;
-
     private final PasswordEncoder encoder;
 
     public RegistrationBlockable(TelegramSender telegramSender,
-                                 QuestionnaireService questionnaireService,
-                                 AthleteService athleteService,
+                                 ServiceKeeper serviceKeeper,
                                  PasswordEncoder encoder) {
-        super(telegramSender);
-        this.questionnaireService = questionnaireService;
-        this.athleteService = athleteService;
+        super(telegramSender, serviceKeeper);
         this.encoder = encoder;
     }
 
@@ -48,7 +42,7 @@ public class RegistrationBlockable extends PaddedBlockable<RegistrationBlockable
         public RegistrationHelper() {
         }
 
-        public RegistrationHelper build(Questionnaire questionnaire){
+        public RegistrationHelper build(Questionnaire questionnaire) {
             this.setQuestionnaire(questionnaire);
             return this;
         }
@@ -84,7 +78,7 @@ public class RegistrationBlockable extends PaddedBlockable<RegistrationBlockable
     private SendResponse registerAthlete(Long chatId, RegistrationHelper helper, String txt) {
         if (txt.equals(helper.getPassword())) {
             Questionnaire questionnaire = helper.getQuestionnaire();
-            athleteService.postAthlete(
+            athleteService().post(
                     Athlete.builder()
                             .id(questionnaire.getId())
                             .role(Role.ROLE_ATHLETE)
@@ -97,7 +91,7 @@ public class RegistrationBlockable extends PaddedBlockable<RegistrationBlockable
                                     questionnaire.getHeight(),
                                     questionnaire.getWeight()));
             questionnaire.setRegistered(true);
-            questionnaireService.putQuestionnaire(questionnaire);
+            questionnaireService().put(questionnaire);
             helpers().remove(chatId);
             sender().sendResponse(new SendMessage(chatId, "Bы зарегистрированы, теперь можете авторизоваться в личном кабинете."));
             return node().getPrevBlockable().uniqueStartBlockMessage(chatId);
@@ -108,7 +102,7 @@ public class RegistrationBlockable extends PaddedBlockable<RegistrationBlockable
     public SendResponse uniqueStartBlockMessage(Long chatId) {
         Questionnaire questionnaire;
         try {
-            questionnaire = questionnaireService.findQuestionnaireById(chatId);
+            questionnaire = questionnaireService().findById(chatId);
         } catch (NotFoundInDataBaseException e) {
             sender().sendResponse(new SendMessage(chatId, """
                     На данный момент вы пока не отправляли заполненную анкету.

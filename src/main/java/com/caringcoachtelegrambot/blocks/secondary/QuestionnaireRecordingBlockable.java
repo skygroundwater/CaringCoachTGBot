@@ -4,7 +4,7 @@ import com.caringcoachtelegrambot.blocks.parents.SimpleBlockable;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Questionnaire;
-import com.caringcoachtelegrambot.services.QuestionnaireService;
+import com.caringcoachtelegrambot.services.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
@@ -20,11 +20,9 @@ import static com.caringcoachtelegrambot.utils.Constants.BACK;
 @Component
 public class QuestionnaireRecordingBlockable extends SimpleBlockable<QuestionnaireRecordingBlockable.QuestionnaireHelper> {
 
-    private final QuestionnaireService questionnaireService;
-
-    public QuestionnaireRecordingBlockable(TelegramSender telegramSender, QuestionnaireService questionnaireService) {
-        super(telegramSender);
-        this.questionnaireService = questionnaireService;
+    public QuestionnaireRecordingBlockable(TelegramSender telegramSender,
+                                           ServiceKeeper serviceKeeper) {
+        super(telegramSender, serviceKeeper);
     }
 
     @EqualsAndHashCode(callSuper = true)
@@ -127,7 +125,7 @@ public class QuestionnaireRecordingBlockable extends SimpleBlockable<Questionnai
                     return continueFilling(chatId, "Последнее! Какие предпочтения у вас");
                 } else if (quest.getPreferences() == null) {
                     quest.setPreferences(info);
-                    questionnaireService.postQuestionnaire(quest);
+                    questionnaireService().post(quest);
                     stopFillingOut(chatId);
                     continueFilling(chatId, "Ваша анкета принята!");
                     return goToBack(chatId);
@@ -138,7 +136,7 @@ public class QuestionnaireRecordingBlockable extends SimpleBlockable<Questionnai
         return sender().sendResponse(new SendMessage(chatId, "Заполнение анкеты было прервано. В следующий раз придется начать заново"));
     }
 
-    private static final String STOP_THE_FILL = "Остановить отправку отчета";
+    private static final String STOP_THE_FILL = "Остановить отправку анкеты";
 
     private boolean forcedStopFillingOut(Long chatId, String info) {
         if (info.equals(STOP_THE_FILL)) {

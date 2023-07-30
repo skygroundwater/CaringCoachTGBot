@@ -1,6 +1,6 @@
-package com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.interfaces;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces;
 
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.TrainerHelper;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotFoundInDataBaseException;
 import com.caringcoachtelegrambot.models.Questionnaire;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
@@ -13,8 +13,7 @@ import static com.caringcoachtelegrambot.utils.Constants.BACK;
 
 @Getter
 @Setter
-public class QuestionnaireInterface extends TrainerAccountInterface{
-
+public class QuestionnaireInterface extends TrainerAccountInterface {
 
     private Questionnaire questionnaire;
 
@@ -99,7 +98,7 @@ public class QuestionnaireInterface extends TrainerAccountInterface{
     }
 
     private SendResponse deleteQuestionnaire(Long chatId) {
-        getHelper().getQuestionnaireService().deleteQuestionnaire(this.questionnaire);
+        questionnaireService().delete(this.questionnaire);
         sender().sendResponse(new SendMessage(this.questionnaire.getId(),
                 "Вашу анкету отклонил тренер. Вам лучше заполнить анкету заново"));
         sender().sendResponse(new SendMessage(chatId, String.format("Анкета от %s отклонена",
@@ -110,7 +109,7 @@ public class QuestionnaireInterface extends TrainerAccountInterface{
 
     private SendResponse acceptQuestionnaire(Long chatId) {
         this.questionnaire.setChecked(true);
-        getHelper().getQuestionnaireService().putQuestionnaire(this.questionnaire);
+        questionnaireService().put(this.questionnaire);
         sender().sendResponse(new SendMessage(this.questionnaire.getId(),
                 "Вашу анкету принял тренер. Теперь вы можете зарегистрироваться"));
         this.questionnaire = new Questionnaire();

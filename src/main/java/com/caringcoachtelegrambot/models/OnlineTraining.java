@@ -1,15 +1,24 @@
 package com.caringcoachtelegrambot.models;
 
 
-import jakarta.persistence.*;
-import lombok.*;
-import org.aspectj.bridge.IMessage;
-import org.springframework.web.service.annotation.GetExchange;
+import com.caringcoachtelegrambot.models.inserts.CaringCoachBotModel;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Column;
+import lombok.NoArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 
-import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Timer;
 
 
 @Entity
@@ -19,7 +28,7 @@ import java.util.Timer;
 @Setter
 @AllArgsConstructor
 @Builder
-public class OnlineTraining {
+public class OnlineTraining extends CaringCoachBotModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

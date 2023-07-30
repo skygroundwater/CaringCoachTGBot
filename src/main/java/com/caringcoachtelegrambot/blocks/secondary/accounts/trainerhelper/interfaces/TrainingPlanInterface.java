@@ -1,10 +1,9 @@
-package com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.interfaces;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces;
 
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.TrainerHelper;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Athlete;
 import com.caringcoachtelegrambot.models.OnlineTraining;
-import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -14,13 +13,11 @@ import lombok.Setter;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
-import java.sql.Time;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -107,7 +104,7 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
         } else {
             onlineTraining.setDescription(onlineTraining.getDescription() + " " + txt);
             onlineTraining.setTime(LocalTime.parse(txt));
-            onlineTrainingService().postTraining(onlineTraining);
+            onlineTrainingService().post(onlineTraining);
             adding = false;
             choosingHelper.getAthletes().clear();
             choosingHelper.setTraining(null);
@@ -125,7 +122,7 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
     private SendResponse goBack(Long chatId, OnlineTraining training) {
         if (training.getAthlete() == null) {
             adding = false;
-            onlineTrainingService().deleteTraining(training);
+            onlineTrainingService().delete(training);
             return sendMenu(chatId);
         } else if (training.getDate() == null) {
             training.setAthlete(null);
@@ -140,7 +137,7 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
         choosingHelper.getTrainings().forEach(
                 (s, training) -> {
                     if (s.equals(txt)) {
-                        onlineTrainingService().deleteTraining(training);
+                        onlineTrainingService().delete(training);
                     }
                 }
         );

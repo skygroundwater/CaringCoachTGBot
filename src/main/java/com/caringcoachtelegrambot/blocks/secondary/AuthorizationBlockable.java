@@ -2,12 +2,11 @@ package com.caringcoachtelegrambot.blocks.secondary;
 
 import com.caringcoachtelegrambot.blocks.parents.PaddedBlockable;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.AthleteAccountBlockable;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.AthleteAccountBlockable;
 import com.caringcoachtelegrambot.exceptions.NotFoundInDataBaseException;
 import com.caringcoachtelegrambot.models.Athlete;
 import com.caringcoachtelegrambot.models.Trainer;
-import com.caringcoachtelegrambot.services.AthleteService;
-import com.caringcoachtelegrambot.services.TrainerService;
+import com.caringcoachtelegrambot.services.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
@@ -24,25 +23,17 @@ import org.springframework.stereotype.Component;
 @Getter
 public class AuthorizationBlockable extends PaddedBlockable<AuthorizationBlockable.AuthorizationHelper> {
 
-    private final AthleteService athleteService;
-
-    private final TrainerService trainerService;
-
     private final PaddedBlockable<? extends Helper> athleteAccountBlockable;
 
     public AuthorizationBlockable(TelegramSender telegramSender,
-                                  AthleteService athleteService,
-                                  TrainerService trainerService,
-                                  PasswordEncoder encoder,
+                                  ServiceKeeper serviceKeeper,
                                   AthleteAccountBlockable athleteAccountBlockable) {
-        super(telegramSender);
-        this.athleteService = athleteService;
-        this.trainerService = trainerService;
+        super(telegramSender, serviceKeeper);
         this.athleteAccountBlockable = athleteAccountBlockable;
     }
 
     private PasswordEncoder encoder() {
-        return trainerService.getEncoder();
+        return trainerService().getEncoder();
     }
 
     @PostConstruct
@@ -111,7 +102,7 @@ public class AuthorizationBlockable extends PaddedBlockable<AuthorizationBlockab
     private SendResponse athleteFunctional(Long chatId, AuthorizationHelper helper) {
         Athlete athlete;
         try {
-            athlete = athleteService.findAthleteById(chatId);
+            athlete = athleteService().findById(chatId);
             helper.setAthlete(athlete);
             if (athlete.getLogin().equals(helper.getLogin()) && encoder().matches(helper.getPassword(), athlete.getPassword())) {
                 helper.setIn(false);
@@ -129,7 +120,7 @@ public class AuthorizationBlockable extends PaddedBlockable<AuthorizationBlockab
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new AuthorizationHelper(trainerService.getTrainer()));
+        helpers().put(chatId, new AuthorizationHelper(trainerService().getTrainer()));
         AuthorizationHelper helper = helpers().get(chatId);
         if (chatId.equals(helper.getTrainer().getId())) {
             return sender().sendResponse(new SendMessage(chatId, "Привет, Пупсеячка)) Введи свой логин)")

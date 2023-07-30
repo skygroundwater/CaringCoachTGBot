@@ -1,6 +1,6 @@
-package com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.interfaces;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces;
 
-import com.caringcoachtelegrambot.blocks.secondary.tertiary.accounts.trainerhelper.TrainerHelper;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotFoundInDataBaseException;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.FAQ;
@@ -67,7 +67,7 @@ public class FAQInterface extends TrainerAccountInterface {
                                                 
                         Ответ: %s
                         """, faq.getQuestion(), faq.getAnswer());
-        faqService().postFAQ(faq);
+        faqService().post(faq);
         sender().sendResponse(new SendMessage(faq.getAthleteId(), answerForAthlete));
         answering = false;
         questionOnScreen = false;
@@ -83,7 +83,7 @@ public class FAQInterface extends TrainerAccountInterface {
     }
 
     private SendResponse rejectFAQ(Long chatId) {
-        getHelper().getFaqService().deleteFAQ(faq);
+        faqService().delete(faq);
         questionOnScreen = false;
         sender().sendResponse(new SendMessage(faq.getAthleteId(), "Ваш вопрос был отклонен тренером"));
         sender().sendResponse(new SendMessage(chatId, "Вы отклонили вопрос"));
@@ -93,7 +93,7 @@ public class FAQInterface extends TrainerAccountInterface {
 
     private SendResponse sendQuestionWithoutAnswer(Long chatId) {
         try {
-            faq = getHelper().getFaqService().findFAQWithoutAnswer();
+            faq = faqService().findById(null);
             if (faq != null) {
                 questionOnScreen = true;
                 return sender().sendResponse(
@@ -129,7 +129,7 @@ public class FAQInterface extends TrainerAccountInterface {
         } else {
             faq.setAnswer(txt);
             getHelper().setAddingNewFaq(false);
-            getHelper().getFaqService().postFAQ(faq);
+            faqService().post(faq);
             faq = null;
             sender().sendResponse(new SendMessage(chatId, "Вы добавили новый FAQ"));
             return getHelper().getTrainerAccountBlockable().uniqueStartBlockMessage(chatId);
