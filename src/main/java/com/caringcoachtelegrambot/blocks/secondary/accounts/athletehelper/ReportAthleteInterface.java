@@ -38,6 +38,6 @@ public class ReportAthleteInterface extends AthleteAccountInterface<ReportAthlet
     public SendResponse process(Long chatId, Message message) {
         String txt = message.text();
 
-        return ;
+        return null;
     }
 }
