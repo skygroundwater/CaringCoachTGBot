@@ -2,13 +2,9 @@ package com.caringcoachtelegrambot.blocks.secondary.accounts;
 
 import com.caringcoachtelegrambot.blocks.parents.AccountBlockable;
 import com.caringcoachtelegrambot.blocks.parents.Blockable;
-import com.caringcoachtelegrambot.blocks.parents.SimpleBlockable;
-import com.caringcoachtelegrambot.blocks.secondary.accounts.athletehelper.AthleteAccountInterface;
-import com.caringcoachtelegrambot.blocks.secondary.accounts.athletehelper.AthleteHelper;
-import com.caringcoachtelegrambot.blocks.secondary.accounts.athletehelper.EditingInterfaceAthlete;
-import com.caringcoachtelegrambot.blocks.secondary.accounts.athletehelper.ReportAthleteInterface;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.athletehelper.*;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
-import com.caringcoachtelegrambot.services.ServiceKeeper;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.KeyboardButton;
@@ -23,41 +19,47 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class AthleteAccountBlockable<H extends AthleteHelper> extends AccountBlockable<AthleteHelper> {
+public class AthleteAccountBlockable extends AccountBlockable<AthleteHelper> {
 
-    private final List<AthleteAccountInterface> interfaces = new ArrayList<>();
+    private final List<AthleteAccountInterface<? extends AthleteHelper>> interfaces = new ArrayList<>();
 
     private final Blockable trainerAccountBlockable;
 
     private final AthleteAccountInterface<EditingInterfaceAthlete.EditingHelper> editInterface;
 
-    private final AthleteAccountInterface<ReportAthleteInterface.ReportHelper> reportAthleteInterface;
+    private final AthleteAccountInterface<ReportAthleteInterface.ReportHelper> reportInterface;
+
+    private final AthleteAccountInterface<DietaryGuideInterface.DietaryGuideHelper> dietaryInterface;
 
     public AthleteAccountBlockable(TelegramSender telegramSender,
                                    ServiceKeeper serviceKeeper,
                                    TrainerAccountBlockable trainerAccountBlockable,
                                    @Qualifier("editingInterfaceAthlete") EditingInterfaceAthlete editInterface,
-                                   @Qualifier("reportAthleteInterface") ReportAthleteInterface reportAthleteInterface) {
+                                   @Qualifier("reportAthleteInterface") ReportAthleteInterface reportInterface,
+                                   @Qualifier("dietaryGuideInterface") AthleteAccountInterface<DietaryGuideInterface.DietaryGuideHelper> dietaryInterface) {
         super(telegramSender, serviceKeeper);
         this.trainerAccountBlockable = trainerAccountBlockable;
-        this.reportAthleteInterface = reportAthleteInterface;
+        this.reportInterface = reportInterface;
         this.editInterface = editInterface;
-        interfaces.add(this.reportAthleteInterface);
+        this.dietaryInterface = dietaryInterface;
+        interfaces.add(this.reportInterface);
         interfaces.add(this.editInterface);
+        interfaces.add(this.dietaryInterface);
     }
 
     @PostConstruct
     private void setUp() {
-        reportAthleteInterface.setPrevBlockable(this);
+        reportInterface.setPrevBlockable(this);
         editInterface.setPrevBlockable(this);
         trainerAccountBlockable.setPrevBlockable(this);
+        dietaryInterface.setPrevBlockable(this);
         this.node().setNextBlockable(trainerAccountBlockable);
     }
 
     @Override
     public SendResponse process(Long chatId, Message message) {
         String txt = message.text();
-        for (AthleteAccountInterface i : interfaces) {
+        for (AthleteAccountInterface<? extends AthleteHelper> i : interfaces) {
             if (i.checkIn(chatId)) {
                 return i.block(chatId, message);
             }
@@ -70,16 +72,20 @@ public class AthleteAccountBlockable<H extends AthleteHelper> extends AccountBlo
                 return goTo(chatId, editInterface);
             }
             case "Связаться с тренером" -> {
-                return goTo(chatId, null);
+                return msg(chatId, trainerService().getTrainer().getLink());
             }
             case "Памятка по питанию" -> {
-                return goTo(chatId, null);
+                return goTo(chatId, dietaryInterface);
             }
             case "Отправить отчёт" -> {
-                return goTo(chatId, reportAthleteInterface);
+                return goTo(chatId, reportInterface);
             }
             case "Оставить отзыв" -> {
-                return goTo(chatId, null);
+                return msg(chatId, """
+                        Вы можете оставить отзыв на сервисе авито по ссылке:
+                                                
+                        *https://www.avito.ru/sankt-peterburg/predlozheniya_uslug/fitnes_trener_onlayn_2617594100*
+                        """);
             }
         }
         throw new NotValidDataException();
@@ -91,7 +97,7 @@ public class AthleteAccountBlockable<H extends AthleteHelper> extends AccountBlo
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new AthleteHelper());
+        helpers().put(chatId, new AthleteHelper(athleteService().findById(chatId)));
         ReplyKeyboardMarkup markup = markup();
         for (KeyboardButton button : buttonsForAthlete()) {
             markup.addRow(button);

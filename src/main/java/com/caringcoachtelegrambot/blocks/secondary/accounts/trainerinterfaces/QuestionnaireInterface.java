@@ -1,13 +1,15 @@
-package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces;
 
-import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotFoundInDataBaseException;
 import com.caringcoachtelegrambot.models.Questionnaire;
+import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 import static com.caringcoachtelegrambot.utils.Constants.BACK;
 
@@ -21,11 +23,19 @@ public class QuestionnaireInterface extends TrainerAccountInterface {
         super(helper);
     }
 
-    public SendResponse choseCheckQuestionnaireOrNot(Long chatId, String txt) {
+
+    protected SendResponse execute(Long chatId, Message message) {
+        String txt = message.text();
         if (!getHelper().isCheckingQuestionnaires()) {
             getHelper().setCheckingQuestionnaires(true);
             return sendQuestionnaire(chatId);
         }
+        return switching(chatId, message);
+    }
+
+    @Override
+    protected SendResponse switching(Long chatId, Message message) {
+        String txt = message.text();
         switch (txt) {
             case "Принять анкету" -> {
                 return acceptQuestionnaire(chatId);
@@ -34,14 +44,14 @@ public class QuestionnaireInterface extends TrainerAccountInterface {
                 return deleteQuestionnaire(chatId);
             }
             case "Назад" -> {
-                return stopCheckingQuestionnaire(chatId);
+                return stop(chatId);
             }
         }
         return sender().sendResponse(new SendMessage(chatId, "Вы в блоке проверки анкет. " +
                 "Если желаете выйти - жмите кнопку назад"));
     }
 
-    private SendResponse stopCheckingQuestionnaire(Long chatId) {
+    protected SendResponse stop(Long chatId) {
         getHelper().setCheckingQuestionnaires(false);
         sender().sendResponse(new SendMessage(chatId, "Вы прервали проверку анкет"));
         return getHelper().getTrainerAccountBlockable().uniqueStartBlockMessage(chatId);
@@ -49,7 +59,6 @@ public class QuestionnaireInterface extends TrainerAccountInterface {
 
     public SendResponse sendQuestionnaire(Long chatId) {
         try {
-
             questionnaire = questionnaireService().findNotCheckedQuestionnaire();
             String info = String.format("""
                             Анкета от %s %s.
@@ -91,10 +100,9 @@ public class QuestionnaireInterface extends TrainerAccountInterface {
         }
     }
 
-    private ReplyKeyboardMarkup markup() {
-        return new ReplyKeyboardMarkup("Принять анкету")
-                .addRow("Отклонить анкету")
-                .addRow(BACK);
+    protected List<String> buttons() {
+        return List.of("Принять анкету",
+                "Отклонить анкету");
     }
 
     private SendResponse deleteQuestionnaire(Long chatId) {

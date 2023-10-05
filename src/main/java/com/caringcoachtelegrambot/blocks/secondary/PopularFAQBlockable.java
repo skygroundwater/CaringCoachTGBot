@@ -2,8 +2,7 @@ package com.caringcoachtelegrambot.blocks.secondary;
 
 import com.caringcoachtelegrambot.blocks.parents.SimpleBlockable;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
-import com.caringcoachtelegrambot.services.FAQService;
-import com.caringcoachtelegrambot.services.ServiceKeeper;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;

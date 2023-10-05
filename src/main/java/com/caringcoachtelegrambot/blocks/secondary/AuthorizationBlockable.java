@@ -6,7 +6,7 @@ import com.caringcoachtelegrambot.blocks.secondary.accounts.AthleteAccountBlocka
 import com.caringcoachtelegrambot.exceptions.NotFoundInDataBaseException;
 import com.caringcoachtelegrambot.models.Athlete;
 import com.caringcoachtelegrambot.models.Trainer;
-import com.caringcoachtelegrambot.services.ServiceKeeper;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;

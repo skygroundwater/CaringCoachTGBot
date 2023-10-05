@@ -11,4 +11,5 @@ public interface FAQRepository extends JpaRepository<FAQ, String> {
 
     List<FAQ> findFAQSByAnswer(String answer);
 
+    List<FAQ> findFAQSByAnswerIsNull();
 }

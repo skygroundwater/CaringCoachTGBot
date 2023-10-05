@@ -1,13 +1,9 @@
-package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces;
 
 import com.caringcoachtelegrambot.blocks.parents.Blockable;
 import com.caringcoachtelegrambot.blocks.secondary.accounts.AccountHelper;
 import com.caringcoachtelegrambot.blocks.secondary.accounts.TrainerAccountBlockable;
-import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces.EditingInterface;
-import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces.FAQInterface;
-import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces.QuestionnaireInterface;
-import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces.TrainingPlanInterface;
-import com.caringcoachtelegrambot.services.*;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.response.SendResponse;
@@ -28,7 +24,11 @@ public class TrainerHelper extends AccountHelper {
 
     private final EditingInterface editingInterface;
 
+    private final ReportCheckingInterface reportCheckingInterface;
+
     private boolean checkingQuestionnaires;
+
+    private boolean checkingReports;
 
     private boolean answeringFAQs;
 
@@ -47,25 +47,31 @@ public class TrainerHelper extends AccountHelper {
         trainingPlanInterface = new TrainingPlanInterface(this);
         faqInterface = new FAQInterface(this);
         editingInterface = new EditingInterface(this);
+        reportCheckingInterface = new ReportCheckingInterface(this);
+
     }
 
-    public final SendResponse checkQuestionnaire(Long chatId, String txt) {
-        return questionnaireInterface.choseCheckQuestionnaireOrNot(chatId, txt);
+    public final SendResponse checkQuestionnaire(Long chatId, Message message) {
+        return questionnaireInterface.execute(chatId, message);
     }
 
-    public final SendResponse answerFAQ(Long chatId, String txt) {
-        return faqInterface.answer(chatId, txt);
+    public final SendResponse answerFAQ(Long chatId, Message message) {
+        return faqInterface.execute(chatId, message);
     }
 
-    public SendResponse newFaq(Long chatId, String txt) {
-        return faqInterface.newFaq(chatId, txt);
+    public SendResponse newFaq(Long chatId, String string) {
+        return faqInterface.newFaq(chatId, string);
     }
 
     public SendResponse makeTrainingPlan(Long chatId, Message message) {
-        return trainingPlanInterface.makeTrainingPlan(chatId, message);
+        return trainingPlanInterface.execute(chatId, message);
     }
 
     public SendResponse editAccount(Long chatId, Message message) {
-        return editingInterface.editAccount(chatId, message);
+        return editingInterface.execute(chatId, message);
+    }
+
+    public SendResponse checkReports(Long chatId, Message message) {
+        return reportCheckingInterface.execute(chatId, message);
     }
 }

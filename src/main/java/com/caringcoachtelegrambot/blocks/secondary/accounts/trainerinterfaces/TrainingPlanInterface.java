@@ -1,6 +1,5 @@
-package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces;
 
-import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Athlete;
 import com.caringcoachtelegrambot.models.OnlineTraining;
@@ -15,6 +14,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +56,7 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
 
     }
 
-    public SendResponse makeTrainingPlan(Long chatId, Message message) {
+    public SendResponse execute(Long chatId, Message message) {
         String txt = message.text();
         if (!getHelper().isMakesTrainingPlan()) {
             getHelper().setMakesTrainingPlan(true);
@@ -66,20 +66,24 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
         } else if (cancelling) {
             return cancelTraining(chatId, txt);
         }
-        if (txt != null) {
-            switch (txt) {
-                case "Записать на тренировку" -> {
-                    return startAdding(chatId);
-                }
-                case "Отменить тренировку" -> {
-                    return startCancelling(chatId);
-                }
-                case "Посмотреть общее расписание" -> {
-                    return sendSchedule(chatId);
-                }
-                case "Назад" -> {
-                    return goBack(chatId);
-                }
+        return switching(chatId, message);
+    }
+
+    @Override
+    protected SendResponse switching(Long chatId, Message message) {
+        String txt = message.text();
+        switch (txt) {
+            case "Записать на тренировку" -> {
+                return startAdding(chatId);
+            }
+            case "Отменить тренировку" -> {
+                return startCancelling(chatId);
+            }
+            case "Посмотреть общее расписание" -> {
+                return sendSchedule(chatId);
+            }
+            case "Назад" -> {
+                return stop(chatId);
             }
         }
         throw new NotValidDataException();
@@ -106,15 +110,16 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
             onlineTraining.setTime(LocalTime.parse(txt));
             onlineTrainingService().post(onlineTraining);
             adding = false;
-            choosingHelper.getAthletes().clear();
-            choosingHelper.setTraining(null);
+            sender().sendResponse(new SendMessage(chatId, "Вы записали на тренировку атлета " + onlineTraining.getAthlete().getFirstName()));
             sender().sendResponse(new SendMessage(onlineTraining.getAthlete().getId(),
                     "Вы записаны на тренировку " + onlineTraining.getDate() + " в " + onlineTraining.getTime()));
+            choosingHelper.getAthletes().clear();
+            choosingHelper.setTraining(null);
             return sendMenu(chatId);
         }
     }
 
-    private SendResponse goBack(Long chatId) {
+    protected SendResponse stop(Long chatId) {
         getHelper().setMakesTrainingPlan(false);
         return trainerAccountBlockable().uniqueStartBlockMessage(chatId);
     }
@@ -183,7 +188,7 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
 
     private SendResponse sendMenu(Long chatId) {
         return sender().sendResponse(new SendMessage(chatId, "Ты в блоке манипуляции тренировками")
-                .replyMarkup(menuMarkup()));
+                .replyMarkup(markup()));
     }
 
     private SendResponse sendDates(Long chatId) {
@@ -220,8 +225,8 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
         LocalDate date = LocalDate.now();
         LocalDate criticalDate = date.plusDays(14);
         while (date.isBefore(criticalDate)) {
-            date = date.plusDays(1);
             datesMarkup.addRow(date.toString());
+            date = date.plusDays(1);
         }
         return datesMarkup;
     }
@@ -230,35 +235,33 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
         ReplyKeyboardMarkup timesMarkup = backMarkup();
         List<OnlineTraining> trainings = onlineTrainingService().findAll();
         LocalTime time = LocalTime.of(9, 0, 0);
+        LocalTime criticalTime = time.plusHours(12);
         LocalDate keptDate = choosingHelper.getTraining().getDate();
         if (trainings.stream().noneMatch(training ->
                 training.getDate().equals(keptDate))) {
-            while (time.isBefore(time.plusHours(12))) {
+            while (time.isBefore(criticalTime)) {
                 timesMarkup.addRow(time.toString());
                 time = time.plusMinutes(30);
             }
         } else {
-            for (OnlineTraining training : trainings.stream()
-                    .filter(training -> training.getDate().equals(keptDate)).toList()) {
-                while (time.isBefore(time.plusHours(12))) {
-                    time = time.plusMinutes(30);
-                    if (!time.equals(training.getTime())
-                            && !time.equals(training.getTime().plusMinutes(30))
-                            && !time.equals(training.getTime().minusMinutes(30))) {
-                        timesMarkup.addRow(time.toString());
-                    }
-                    time = time.plusMinutes(30);
+            List<LocalTime> times = new ArrayList<>();
+            trainings.stream().filter(training -> training.getDate().equals(keptDate)).toList().forEach(training -> times.add(training.getTime()));
+            while (time.isBefore(criticalTime)) {
+                if (!times.contains(time) && !times.contains(time.plusMinutes(30)) && !times.contains(time.minusMinutes(30))) {
+                    timesMarkup.addRow(time.toString());
                 }
+                time = time.plusMinutes(30);
             }
         }
         return timesMarkup;
     }
 
-    private ReplyKeyboardMarkup menuMarkup() {
-        return backMarkup()
-                .addRow("Записать на тренировку")
-                .addRow("Отменить тренировку")
-                .addRow("Посмотреть общее расписание");
+    protected List<String> buttons() {
+        return List.of(
+                "Записать на тренировку",
+                "Отменить тренировку",
+                "Посмотреть общее расписание"
+        );
     }
 }
 

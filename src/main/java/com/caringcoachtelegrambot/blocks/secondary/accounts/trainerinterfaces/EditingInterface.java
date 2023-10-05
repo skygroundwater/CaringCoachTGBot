@@ -1,6 +1,5 @@
-package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces;
 
-import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Trainer;
 import com.pengrad.telegrambot.model.Message;
@@ -10,6 +9,8 @@ import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.List;
 
 import static com.caringcoachtelegrambot.utils.Constants.BACK;
 
@@ -42,6 +43,8 @@ public class EditingInterface extends TrainerAccountInterface {
 
         private boolean about;
 
+        private boolean guide;
+
         public ChangingHelper() {
             login = false;
             oldPassword = false;
@@ -68,13 +71,13 @@ public class EditingInterface extends TrainerAccountInterface {
 
     private static final ChangingHelper chHelper = new ChangingHelper();
 
-    private SendResponse stopChanging(Long chatId) {
+    protected SendResponse stop(Long chatId) {
         changing = false;
         chHelper.setTrainer(null);
         return getHelper().getTrainerAccountBlockable().uniqueStartBlockMessage(chatId);
     }
 
-    public SendResponse editAccount(Long chatId, Message message) {
+    public SendResponse execute(Long chatId, Message message) {
         String function = message.text();
         if (!getHelper().isAccountEditing()) {
             chHelper.setTrainer(trainerService().getTrainer());
@@ -82,9 +85,15 @@ public class EditingInterface extends TrainerAccountInterface {
             return startChanging(chatId);
         }
         if (changing) return changed(chatId, function);
+        else return switching(chatId, message);
+    }
+
+    @Override
+    protected SendResponse switching(Long chatId, Message message) {
+        String function = message.text();
         switch (function) {
             case "Назад" -> {
-                return stopChanging(chatId);
+                return stop(chatId);
             }
             case "Изменить логин" -> {
                 return changeLogin(chatId);
@@ -98,36 +107,57 @@ public class EditingInterface extends TrainerAccountInterface {
             case "Изменить причины" -> {
                 return changeCause(chatId);
             }
+            case "Изменить памятку по питанию" -> {
+                return changeGuide(chatId);
+            }
         }
         throw new NotValidDataException();
+    }
+
+    private SendResponse changeGuide(Long chatId) {
+        changing = true;
+        chHelper.setGuide(true);
+        msg(chatId, chHelper.trainer.getDietaryGuide());
+        return intermediateMsg(chatId, """
+                Предыдущее сообщение указывает на то,
+                как выглядит твоя памятка на данный момент.
+                Можешь скопировать и использовать старую
+                памятку для редактирования
+                """);
     }
 
     private SendResponse changeLogin(Long chatId) {
         changing = true;
         chHelper.setLogin(true);
-        return sender().sendResponse(new SendMessage(chatId, "Введи новый логин")
-                .replyMarkup(backMarkup()));
+        msg(chatId, chHelper.trainer.getLogin());
+        return intermediateMsg(chatId, """
+                Предыдущее сообщение указывает на то, как
+                выглядит твой логин на данный момент
+                Введи новый логин
+                """);
     }
 
     private SendResponse changePassword(Long chatId) {
         changing = true;
         chHelper.setOldPassword(true);
-        return sender().sendResponse(new SendMessage(chatId, "Введи старый пароль")
-                .replyMarkup(backMarkup()));
+        return intermediateMsg(chatId, "Введи старый пароль");
     }
 
     private SendResponse changeAbout(Long chatId) {
         changing = true;
         chHelper.setAbout(true);
-        return sender().sendResponse(new SendMessage(chatId, "Введи новую информацию о себе")
-                .replyMarkup(backMarkup()));
+        msg(chatId, chHelper.trainer.getAbout());
+        return intermediateMsg(chatId, "Введи новую информацию о себе");
     }
 
     private SendResponse changeCause(Long chatId) {
         changing = true;
         chHelper.setCause(true);
-        return sender().sendResponse(new SendMessage(chatId, "Введи новые причины")
-                .replyMarkup(backMarkup()));
+        msg(chatId, chHelper.trainer.getCause());
+        return intermediateMsg(chatId, """
+                Предыдущее сообщение указывает на то, как
+                выглядит твои причины на данный момент
+                """);
     }
 
     private SendResponse changed(Long chatId, String value) {
@@ -149,6 +179,8 @@ public class EditingInterface extends TrainerAccountInterface {
             trainer.setAbout(value);
         } else if (chHelper.cause) {
             trainer.setCause(value);
+        } else if (chHelper.guide) {
+            trainer.setDietaryGuide(value);
         }
         trainerService().put(trainer);
         changing = false;
@@ -190,21 +222,20 @@ public class EditingInterface extends TrainerAccountInterface {
                     Введи новый пароль
                     """));
         } else {
-            return sender().sendResponse(new SendMessage(chatId, "Вы пароли не совпали, попробуйте снова")
-                    .replyMarkup(backMarkup()));
+            return intermediateMsg(chatId, "Вы пароли не совпали, попробуйте снова");
         }
     }
 
     private SendResponse sendVariablesToChange(Long chatId) {
         return sender().sendResponse(new SendMessage(chatId, "Выбери что хотела бы изменить")
-                .replyMarkup(variablesToChangeMarkup()));
+                .replyMarkup(markup()));
     }
 
-    private ReplyKeyboardMarkup variablesToChangeMarkup() {
-        return backMarkup()
-                .addRow("Изменить логин")
-                .addRow("Изменить пароль")
-                .addRow("Изменить информацию о тренере")
-                .addRow("Изменить причины");
+    protected List<String> buttons() {
+        return List.of(
+                "Изменить логин",
+                "Изменить пароль",
+                "Изменить информацию о тренере",
+                "Изменить причины");
     }
 }

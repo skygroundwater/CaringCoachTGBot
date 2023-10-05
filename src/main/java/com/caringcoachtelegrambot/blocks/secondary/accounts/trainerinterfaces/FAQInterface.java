@@ -1,14 +1,16 @@
-package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.interfaces;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces;
 
-import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotFoundInDataBaseException;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.FAQ;
+import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 import static com.caringcoachtelegrambot.utils.Constants.BACK;
 
@@ -28,24 +30,30 @@ public class FAQInterface extends TrainerAccountInterface {
     }
 
 
-    public SendResponse answer(Long chatId, String txt) {
+    public SendResponse execute(Long chatId, Message message) {
+        String txt = message.text();
         getHelper().setAnsweringFAQs(true);
         if (this.answering) {
             return setAnswer(chatId, txt);
         } else if (!this.questionOnScreen) {
             return sendQuestionWithoutAnswer(chatId);
-        } else
-            switch (txt) {
-                case "Отправить ответ" -> {
-                    return startAnswering(chatId);
-                }
-                case "Отклонить вопрос" -> {
-                    return rejectFAQ(chatId);
-                }
-                case "Назад" -> {
-                    return stopAnswering(chatId);
-                }
+        } else return switching(chatId, message);
+    }
+
+    @Override
+    protected SendResponse switching(Long chatId, Message message) {
+        String txt = message.text();
+        switch (txt) {
+            case "Отправить ответ" -> {
+                return startAnswering(chatId);
             }
+            case "Отклонить вопрос" -> {
+                return rejectFAQ(chatId);
+            }
+            case "Назад" -> {
+                return stop(chatId);
+            }
+        }
         throw new NotValidDataException();
     }
 
@@ -75,7 +83,7 @@ public class FAQInterface extends TrainerAccountInterface {
         return sendQuestionWithoutAnswer(chatId);
     }
 
-    private SendResponse stopAnswering(Long chatId) {
+    protected SendResponse stop(Long chatId) {
         this.answering = false;
         questionOnScreen = false;
         getHelper().setAnsweringFAQs(false);
@@ -93,12 +101,12 @@ public class FAQInterface extends TrainerAccountInterface {
 
     private SendResponse sendQuestionWithoutAnswer(Long chatId) {
         try {
-            faq = faqService().findById(null);
+            faq = faqService().findFAQWithoutAnswer();
             if (faq != null) {
                 questionOnScreen = true;
                 return sender().sendResponse(
                         new SendMessage(chatId, faq.getQuestion())
-                                .replyMarkup(markupForAnswering()));
+                                .replyMarkup(markup()));
             }
         } catch (NotFoundInDataBaseException e) {
             getHelper().setAnsweringFAQs(false);
@@ -111,11 +119,8 @@ public class FAQInterface extends TrainerAccountInterface {
     }
 
 
-    private ReplyKeyboardMarkup markupForAnswering() {
-        return new ReplyKeyboardMarkup("Отправить ответ")
-                .addRow("Отклонить вопрос")
-                .addRow(BACK)
-                .oneTimeKeyboard(true);
+    protected List<String> buttons() {
+        return List.of("Отправить ответ", "Отклонить вопрос");
     }
 
     public SendResponse newFaq(Long chatId, String txt) {

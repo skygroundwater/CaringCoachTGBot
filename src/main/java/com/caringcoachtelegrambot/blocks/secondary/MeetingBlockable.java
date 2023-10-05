@@ -3,8 +3,7 @@ package com.caringcoachtelegrambot.blocks.secondary;
 import com.caringcoachtelegrambot.blocks.parents.SimpleBlockable;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
-import com.caringcoachtelegrambot.services.ServiceKeeper;
-import com.caringcoachtelegrambot.services.TrainerService;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.KeyboardButton;
@@ -59,7 +58,8 @@ public class MeetingBlockable extends SimpleBlockable<MeetingBlockable.MeetingHe
     public ReplyKeyboardMarkup markup() {
         return backMarkup().addRow(
                 new KeyboardButton("Обо мне"),
-                new KeyboardButton("Мои регалии"));
+                new KeyboardButton("Мои регалии"))
+                .addRow("тебе нужна работа со мной если...");
     }
 
     private SendResponse about(Long chatId) {

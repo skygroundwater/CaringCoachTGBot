@@ -35,7 +35,6 @@ public class Trainer extends CaringCoachBotModel {
     @Column(name = "link")
     private String link;
 
-    public Trainer(Long id) {
-        this.id = id;
-    }
+    @Column(name = "dietary_guide")
+    private String dietaryGuide;
 }

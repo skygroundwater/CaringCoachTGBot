@@ -40,6 +40,10 @@ public abstract class AccountInterface<H extends AccountHelper> {
         return helper.getServiceKeeper().getAthleteService();
     }
 
+    public final ReportService reportService() {
+        return helper.getServiceKeeper().getReportService();
+    }
+
 
     public ReplyKeyboardMarkup backMarkup() {
         return new ReplyKeyboardMarkup(BACK);

@@ -4,6 +4,7 @@ import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Node;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.services.*;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -83,6 +84,10 @@ public abstract class SimpleBlockable<T extends Helper> implements BlockableForB
         return serviceKeeper.getTrainerService();
     }
 
+    public final ReportService reportService() {
+        return serviceKeeper.getReportService();
+    }
+
     @Override
     public final boolean checkIn(Long chatId) {
         T helper = helpers.get(chatId);
@@ -98,6 +103,10 @@ public abstract class SimpleBlockable<T extends Helper> implements BlockableForB
             helper.setIn(false);
         }
         return node.getPrevBlockable().uniqueStartBlockMessage(chatId);
+    }
+
+    protected final SendResponse msg(Long chatId, String txt) {
+        return sender.sendResponse(new SendMessage(chatId, txt));
     }
 
     @Override

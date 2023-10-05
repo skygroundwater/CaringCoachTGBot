@@ -33,5 +33,4 @@ public class FAQ extends CaringCoachBotModel {
         this.athleteId = chatId;
         this.answer = null;
     }
-
 }

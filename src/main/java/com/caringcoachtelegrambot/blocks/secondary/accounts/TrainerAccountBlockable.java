@@ -1,9 +1,9 @@
 package com.caringcoachtelegrambot.blocks.secondary.accounts;
 
 import com.caringcoachtelegrambot.blocks.parents.AccountBlockable;
-import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerhelper.TrainerHelper;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
-import com.caringcoachtelegrambot.services.*;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.KeyboardButton;
@@ -19,6 +19,7 @@ import java.util.List;
 @Component
 @Getter
 public class TrainerAccountBlockable extends AccountBlockable<TrainerHelper> {
+
     @Autowired
     public TrainerAccountBlockable(TelegramSender telegramSender,
                                    ServiceKeeper serviceKeeper) {
@@ -43,15 +44,17 @@ public class TrainerAccountBlockable extends AccountBlockable<TrainerHelper> {
         TrainerHelper helper = helpers().get(chatId);
         if (txt != null) {
             if (helper.isCheckingQuestionnaires()) {
-                return helper.checkQuestionnaire(chatId, txt);
+                return helper.checkQuestionnaire(chatId, message);
             } else if (helper.isAnsweringFAQs()) {
-                return helper.answerFAQ(chatId, txt);
+                return helper.answerFAQ(chatId, message);
             } else if (helper.isAddingNewFaq()) {
                 return helper.newFaq(chatId, txt);
             } else if (helper.isMakesTrainingPlan()) {
                 return helper.makeTrainingPlan(chatId, message);
             } else if (helper.isAccountEditing()) {
                 return helper.editAccount(chatId, message);
+            } else if (helper.isCheckingReports()) {
+                return helper.checkReports(chatId, message);
             }
             switch (txt) {
                 case "Редактировать аккаунт" -> {
@@ -61,16 +64,19 @@ public class TrainerAccountBlockable extends AccountBlockable<TrainerHelper> {
                     return goBack(chatId);
                 }
                 case "Проверить анкеты" -> {
-                    return helper.checkQuestionnaire(chatId, txt);
+                    return helper.checkQuestionnaire(chatId, message);
                 }
                 case "Ответить на заданные вопросы" -> {
-                    return helper.answerFAQ(chatId, txt);
+                    return helper.answerFAQ(chatId, message);
                 }
                 case "Добавить новый FAQ" -> {
                     return helper.newFaq(chatId, txt);
                 }
                 case "Тренировки. Расписание" -> {
                     return helper.makeTrainingPlan(chatId, message);
+                }
+                case "Проверить отчёты" -> {
+                    return helper.checkReports(chatId, message);
                 }
             }
         }
@@ -79,7 +85,6 @@ public class TrainerAccountBlockable extends AccountBlockable<TrainerHelper> {
 
     private SendResponse goBack(Long chatId) {
         helpers().remove(chatId);
-        assert node().getPrevBlockable() instanceof AthleteAccountBlockable;
         AthleteAccountBlockable athleteAccount = (AthleteAccountBlockable) node().getPrevBlockable();
         return athleteAccount.goToBack(chatId);
     }
@@ -89,6 +94,7 @@ public class TrainerAccountBlockable extends AccountBlockable<TrainerHelper> {
                 new KeyboardButton("Проверить анкеты"),
                 new KeyboardButton("Ответить на заданные вопросы"),
                 new KeyboardButton("Добавить новый FAQ"),
-                new KeyboardButton("Тренировки. Расписание"));
+                new KeyboardButton("Тренировки. Расписание"),
+                new KeyboardButton("Проверить отчёты"));
     }
 }

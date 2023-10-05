@@ -1,5 +1,6 @@
-package com.caringcoachtelegrambot.services;
+package com.caringcoachtelegrambot.services.keeper;
 
+import com.caringcoachtelegrambot.services.*;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
 
@@ -19,17 +20,20 @@ public class ServiceKeeper {
 
     private final OnlineTrainingService onlineTrainingService;
 
+    private final ReportService reportService;
+
     public ServiceKeeper(AthleteService athleteService,
                          QuestionnaireService questionnaireService,
                          CertificateService certificateService,
                          TrainerService trainerService,
                          FAQService faqService,
-                         OnlineTrainingService onlineTrainingService) {
+                         OnlineTrainingService onlineTrainingService, ReportService reportService) {
         this.athleteService = athleteService;
         this.questionnaireService = questionnaireService;
         this.certificateService = certificateService;
         this.trainerService = trainerService;
         this.faqService = faqService;
         this.onlineTrainingService = onlineTrainingService;
+        this.reportService = reportService;
     }
 }

@@ -1,7 +1,7 @@
 package com.caringcoachtelegrambot.blocks.parents;
 
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
-import com.caringcoachtelegrambot.services.ServiceKeeper;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Setter;
