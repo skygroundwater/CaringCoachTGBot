@@ -1,16 +1,19 @@
 package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces;
 
+import com.caringcoachtelegrambot.blocks.secondary.accounts.AccountInterface;
+import com.caringcoachtelegrambot.blocks.secondary.helpers.accounthelpers.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Athlete;
 import com.caringcoachtelegrambot.models.OnlineTraining;
+import com.caringcoachtelegrambot.models.Trainer;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
+import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -19,36 +22,38 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Getter
-@Setter
-public class TrainingPlanInterface extends TrainerAccountInterface {
+@Component
+public class TrainingPlanInterface extends AccountInterface<TrainingPlanInterface.TrainingPlanHelper> {
 
-    private final ChoosingHelper choosingHelper;
-
-    private ReplyKeyboardMarkup athletesMarkup;
-
-    private boolean adding;
-
-    private boolean cancelling;
-
-    public TrainingPlanInterface(TrainerHelper helper) {
-        super(helper);
-        this.choosingHelper = new ChoosingHelper();
+    public TrainingPlanInterface(TelegramSender sender, ServiceKeeper serviceKeeper) {
+        super(sender, serviceKeeper);
     }
 
-    @Getter
     @Setter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    private static class ChoosingHelper {
+    @Getter
+    public static class TrainingPlanHelper extends TrainerHelper {
 
-        private Map<String, Athlete> athletes = new HashMap<>();
+        public TrainingPlanHelper(Trainer trainer) {
+            super(trainer);
+        }
 
-        private Map<String, OnlineTraining> trainings = new HashMap<>();
+        private final Map<String, Athlete> athletes = new HashMap<>();
+
+        private final Map<String, OnlineTraining> trainings = new HashMap<>();
 
         private Athlete athlete;
 
         private OnlineTraining training;
+
+        private ReplyKeyboardMarkup athletesMarkup;
+
+        private ReplyKeyboardMarkup trainingsMarkup;
+
+        private boolean makingTrainingPlan;
+
+        private boolean adding;
+
+        private boolean cancelling;
 
         private boolean date;
 
@@ -56,46 +61,58 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
 
     }
 
-    public SendResponse execute(Long chatId, Message message) {
-        String txt = message.text();
-        if (!getHelper().isMakesTrainingPlan()) {
-            getHelper().setMakesTrainingPlan(true);
-            return sendMenu(chatId);
-        } else if (adding) {
-            return fillOnlineTraining(chatId, txt);
-        } else if (cancelling) {
-            return cancelTraining(chatId, txt);
-        }
-        return switching(chatId, message);
+    @Override
+    public SendResponse uniqueStartBlockMessage(Long chatId) {
+        signIn(chatId, new TrainingPlanHelper(trainerService().findTrainerById(chatId)));
+        return msg(chatId, "Вы в блоке памятки по питанию", markup());
     }
 
     @Override
-    protected SendResponse switching(Long chatId, Message message) {
+    public List<String> buttons() {
+        return List.of(
+                "Записать на тренировку",
+                "Отменить тренировку",
+                "Посмотреть общее расписание"
+        );
+    }
+
+    @Override
+    protected SendResponse switching(Long chatId, Message message, TrainingPlanHelper helper) {
         String txt = message.text();
         switch (txt) {
             case "Записать на тренировку" -> {
-                return startAdding(chatId);
+                return startAdding(chatId, helper);
             }
             case "Отменить тренировку" -> {
-                return startCancelling(chatId);
+                return startCancelling(chatId, helper);
             }
             case "Посмотреть общее расписание" -> {
-                return sendSchedule(chatId);
+                return sendSchedule(chatId, helper);
             }
             case "Назад" -> {
-                return stop(chatId);
+                return goToBack(chatId);
             }
         }
         throw new NotValidDataException();
     }
 
-    private SendResponse fillOnlineTraining(Long chatId, String txt) {
-        OnlineTraining onlineTraining = choosingHelper.getTraining();
+    @Override
+    protected SendResponse work(Long chatId, Message message, TrainingPlanHelper helper) {
+        String txt = message.text();
+        if (helper.adding) {
+            return fillOnlineTraining(chatId, txt, helper);
+        } else if (helper.cancelling) {
+            return cancelTraining(chatId, txt, helper);
+        } else return sendMenu(chatId);
+    }
+
+    private SendResponse fillOnlineTraining(Long chatId, String txt, TrainingPlanHelper helper) {
+        OnlineTraining onlineTraining = helper.getTraining();
         if (txt.equals("Назад")) {
-            return goBack(chatId, onlineTraining);
+            return goBack(chatId, onlineTraining, helper);
         }
         if (onlineTraining.getAthlete() == null) {
-            Athlete athlete = choosingHelper.getAthletes().get(txt);
+            Athlete athlete = helper.getAthletes().get(txt);
             if (athlete != null) {
                 onlineTraining.setAthlete(athlete);
                 onlineTraining.setDescription(athlete.getFirstName() + " " + athlete.getSecondName());
@@ -104,65 +121,60 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
         } else if (onlineTraining.getDate() == null) {
             onlineTraining.setDate(LocalDate.parse(txt));
             onlineTraining.setDescription(onlineTraining.getDescription() + " " + txt);
-            return sendTimes(chatId);
+            return sendTimes(chatId, helper);
         } else {
             onlineTraining.setDescription(onlineTraining.getDescription() + " " + txt);
             onlineTraining.setTime(LocalTime.parse(txt));
             onlineTrainingService().post(onlineTraining);
-            adding = false;
-            sender().sendResponse(new SendMessage(chatId, "Вы записали на тренировку атлета " + onlineTraining.getAthlete().getFirstName()));
-            sender().sendResponse(new SendMessage(onlineTraining.getAthlete().getId(),
-                    "Вы записаны на тренировку " + onlineTraining.getDate() + " в " + onlineTraining.getTime()));
-            choosingHelper.getAthletes().clear();
-            choosingHelper.setTraining(null);
+            helper.adding = false;
+            msg(chatId, "Вы записали на тренировку атлета " + onlineTraining.getAthlete().getFirstName());
+            msg(onlineTraining.getAthlete().getId(),
+                    "Вы записаны на тренировку " + onlineTraining.getDate() + " в " + onlineTraining.getTime());
+            helper.getAthletes().clear();
+            helper.setTraining(null);
             return sendMenu(chatId);
         }
     }
 
-    protected SendResponse stop(Long chatId) {
-        getHelper().setMakesTrainingPlan(false);
-        return trainerAccountBlockable().uniqueStartBlockMessage(chatId);
-    }
-
-    private SendResponse goBack(Long chatId, OnlineTraining training) {
+    private SendResponse goBack(Long chatId, OnlineTraining training, TrainingPlanHelper helper) {
         if (training.getAthlete() == null) {
-            adding = false;
+            helper.adding = false;
             onlineTrainingService().delete(training);
             return sendMenu(chatId);
         } else if (training.getDate() == null) {
             training.setAthlete(null);
-            return sendAthletes(chatId);
+            return sendAthletes(chatId, helper);
         } else {
             training.setDate(null);
             return sendDates(chatId);
         }
     }
 
-    private SendResponse cancelTraining(Long chatId, String txt) {
-        choosingHelper.getTrainings().forEach(
+    private SendResponse cancelTraining(Long chatId, String txt, TrainingPlanHelper helper) {
+        helper.getTrainings().forEach(
                 (s, training) -> {
                     if (s.equals(txt)) {
                         onlineTrainingService().delete(training);
                     }
                 }
         );
-        cancelling = false;
+        helper.cancelling = false;
         return sendMenu(chatId);
     }
 
-    private SendResponse startAdding(Long chatId) {
-        athletesMarkup = backMarkup();
+    private SendResponse startAdding(Long chatId, TrainingPlanHelper helper) {
+        helper.athletesMarkup = backMarkup();
         for (Athlete athlete : athleteService().findAll()) {
             String athleteKey = athlete.getFirstName() + " " + athlete.getSecondName();
-            choosingHelper.getAthletes().put(athleteKey, athlete);
-            athletesMarkup.addRow(athleteKey);
+            helper.getAthletes().put(athleteKey, athlete);
+            helper.athletesMarkup.addRow(athleteKey);
         }
-        adding = true;
-        choosingHelper.setTraining(new OnlineTraining());
-        return sendAthletes(chatId);
+        helper.adding = true;
+        helper.setTraining(new OnlineTraining());
+        return sendAthletes(chatId, helper);
     }
 
-    private SendResponse sendSchedule(Long chatId) {
+    private SendResponse sendSchedule(Long chatId, TrainingPlanHelper helper) {
         String info = """
                                 
                 %s
@@ -173,46 +185,41 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
                 training -> stringBuilder
                         .append(String.format(info, training.getDescription()))
         );
-        return sender().sendResponse(new SendMessage(chatId, stringBuilder.toString()));
+        return msg(chatId, stringBuilder.toString());
     }
 
-    private SendResponse startCancelling(Long chatId) {
-        cancelling = true;
-        return sendTrainings(chatId);
+    private SendResponse startCancelling(Long chatId, TrainingPlanHelper helper) {
+        helper.cancelling = true;
+        return sendTrainings(chatId, helper);
     }
 
-    private SendResponse sendTrainings(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, "Выберите тренировку")
-                .replyMarkup(trainingsMarkup()));
+    private SendResponse sendTrainings(Long chatId, TrainingPlanHelper helper) {
+        return msg(chatId, "Выберите тренировку", trainingsMarkup(helper));
     }
 
     private SendResponse sendMenu(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, "Ты в блоке манипуляции тренировками")
-                .replyMarkup(markup()));
+        return msg(chatId, "Ты в блоке манипуляции тренировками", markup());
     }
 
     private SendResponse sendDates(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, "Следующим сообщением выбери дату")
-                .replyMarkup(datesMarkup()));
+        return msg(chatId, "Следующим сообщением выбери дату", datesMarkup());
     }
 
-    private SendResponse sendTimes(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, "Выбери время")
-                .replyMarkup(timesMarkup()));
+    private SendResponse sendTimes(Long chatId, TrainingPlanHelper helper) {
+        return msg(chatId, "Выбери время", timesMarkup(helper));
     }
 
-    private SendResponse sendAthletes(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, "Выбери атлета")
-                .replyMarkup(athletesMarkup));
+    private SendResponse sendAthletes(Long chatId, TrainingPlanHelper helper) {
+        return msg(chatId, "Выбери атлета", helper.athletesMarkup);
     }
 
-    private ReplyKeyboardMarkup trainingsMarkup() {
+    private ReplyKeyboardMarkup trainingsMarkup(TrainingPlanHelper helper) {
         ReplyKeyboardMarkup trainingsMarkup = backMarkup();
         onlineTrainingService().findAll().forEach(
                 training -> {
                     if (!training.isDone()) {
                         String trainingKey = training.getDescription();
-                        choosingHelper.trainings.put(trainingKey, training);
+                        helper.trainings.put(trainingKey, training);
                         trainingsMarkup.addRow(trainingKey);
                     }
                 }
@@ -231,12 +238,12 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
         return datesMarkup;
     }
 
-    private ReplyKeyboardMarkup timesMarkup() {
+    private ReplyKeyboardMarkup timesMarkup(TrainingPlanHelper helper) {
         ReplyKeyboardMarkup timesMarkup = backMarkup();
         List<OnlineTraining> trainings = onlineTrainingService().findAll();
         LocalTime time = LocalTime.of(9, 0, 0);
         LocalTime criticalTime = time.plusHours(12);
-        LocalDate keptDate = choosingHelper.getTraining().getDate();
+        LocalDate keptDate = helper.getTraining().getDate();
         if (trainings.stream().noneMatch(training ->
                 training.getDate().equals(keptDate))) {
             while (time.isBefore(criticalTime)) {
@@ -255,13 +262,4 @@ public class TrainingPlanInterface extends TrainerAccountInterface {
         }
         return timesMarkup;
     }
-
-    protected List<String> buttons() {
-        return List.of(
-                "Записать на тренировку",
-                "Отменить тренировку",
-                "Посмотреть общее расписание"
-        );
-    }
 }
-

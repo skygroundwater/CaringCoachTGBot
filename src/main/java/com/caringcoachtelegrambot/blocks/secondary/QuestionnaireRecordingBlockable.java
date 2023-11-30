@@ -14,6 +14,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 import static com.caringcoachtelegrambot.utils.Constants.BACK;
 
 
@@ -48,92 +50,86 @@ public class QuestionnaireRecordingBlockable extends SimpleBlockable<Questionnai
             if (!helper.isStarted()) {
                 switch (info) {
                     case "Начать заполнение анкеты" -> {
-                        return startFillingOutTheQuestionnaire(chatId);
+                        return startFillingOutTheQuestionnaire(chatId, helper);
                     }
                     case "Назад" -> {
                         return goToBack(chatId);
                     }
                 }
-            } else return fillingOutTheQuestionnaire(chatId, info);
+            } else return fillingOutTheQuestionnaire(chatId, info, helper);
         }
         throw new NotValidDataException();
     }
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new QuestionnaireHelper());
-        return sender().sendResponse(new SendMessage(chatId, """
+        signIn(chatId, new QuestionnaireHelper());
+        return msg(chatId, """
                 Вы находитесь перед стартом заполнения своей анкеты.
                 Пожалуйста, чем подробнее ответите, тем точнее и грамотнее
                 мне удастся составить для Вас тренировочный план 🌸
                 Заранее спасибо за развёрнутые ответы!
-                """).replyMarkup(markup()));
+                """, markup());
     }
 
     @Override
-    public ReplyKeyboardMarkup markup() {
-        return new ReplyKeyboardMarkup("Начать заполнение анкеты")
-                .addRow(BACK).oneTimeKeyboard(true);
+    public List<String> buttons() {
+        return List.of("Начать заполнение анкеты");
     }
 
-    private SendResponse startFillingOutTheQuestionnaire(Long chatId) {
-        helpers().forEach((aLong, questionnaireHelper) -> {
-            if (aLong.equals(chatId)) {
-                questionnaireHelper.getQuestionnaire().setId(chatId);
-                questionnaireHelper.setStarted(true);
-            }
-        });
-        return sender().sendResponse(new SendMessage(chatId, "Введите ваше имя")
-                .replyMarkup(new ReplyKeyboardMarkup(STOP_THE_FILL)));
+    private SendResponse startFillingOutTheQuestionnaire(Long chatId, QuestionnaireHelper helper) {
+        helper.getQuestionnaire().setId(chatId);
+        helper.setStarted(true);
+        return msg(chatId, "Введите ваше имя", new ReplyKeyboardMarkup(STOP_THE_FILL));
     }
 
-    private SendResponse fillingOutTheQuestionnaire(Long chatId, String info) {
+    private SendResponse fillingOutTheQuestionnaire(Long chatId, String info, QuestionnaireHelper helper) {
         if (!forcedStopFillingOut(chatId, info)) {
-            Questionnaire quest = helpers().get(chatId).getQuestionnaire();
+            Questionnaire quest = helper.questionnaire;
             if (quest != null) {
                 if (quest.getFirstName() == null) {
                     quest.setFirstName(info);
-                    return continueFilling(chatId, "Введите фамилию");
+                    return msg(chatId, "Введите фамилию");
                 } else if (quest.getSecondName() == null) {
                     quest.setSecondName(info);
-                    return continueFilling(chatId, "Введите возраст");
+                    return msg(chatId, "Введите возраст");
                 } else if (quest.getAge() == null) {
                     quest.setAge(info);
-                    return continueFilling(chatId, "Введите ваш рост");
+                    return msg(chatId, "Введите ваш рост");
                 } else if (quest.getHeight() == null) {
                     quest.setHeight(info);
-                    return continueFilling(chatId, "Укажите ваш вес");
+                    return msg(chatId, "Укажите ваш вес");
                 } else if (quest.getWeight() == null) {
                     quest.setWeight(info);
-                    return continueFilling(chatId, """
+                    return msg(chatId, """
                             Отлично! Теперь расскажите про ваши цели, которых хотите достичь в тренировках
                             """);
                 } else if (quest.getTargetOfTrainings() == null) {
                     quest.setTargetOfTrainings(info);
-                    return continueFilling(chatId, "Расскажите какие ограничения у вас есть, в том числе, по здоровью");
+                    return msg(chatId, "Расскажите какие ограничения у вас есть, в том числе, по здоровью");
                 } else if (quest.getRestrictions() == null) {
                     quest.setRestrictions(info);
-                    return continueFilling(chatId, "Укажите какой опыт у вас уже имеется");
+                    return msg(chatId, "Укажите какой опыт у вас уже имеется");
                 } else if (quest.getExperience() == null) {
                     quest.setExperience(info);
-                    return continueFilling(chatId, "Расскажите про свой актуальный рацион питания");
+                    return msg(chatId, "Расскажите про свой актуальный рацион питания");
                 } else if (quest.getNutrition() == null) {
                     quest.setNutrition(info);
-                    return continueFilling(chatId, "Расскажите каким оборудованием для тренировок вф располагаете");
+                    return msg(chatId, "Расскажите каким оборудованием для тренировок вф располагаете");
                 } else if (quest.getEquipment() == null) {
                     quest.setEquipment(info);
-                    return continueFilling(chatId, "Последнее! Какие предпочтения у вас");
+                    return msg(chatId, "Последнее! Какие предпочтения у вас");
                 } else if (quest.getPreferences() == null) {
                     quest.setPreferences(info);
                     questionnaireService().post(quest);
                     stopFillingOut(chatId);
-                    continueFilling(chatId, "Ваша анкета принята!");
+                    msg(chatId, "Ваша анкета принята!");
                     return goToBack(chatId);
                 }
             }
-            return sender().sendResponse(new SendMessage(chatId, "Какой-то косяк"));
+            return msg(chatId, "Какой-то косяк");
         }
-        return sender().sendResponse(new SendMessage(chatId, "Заполнение анкеты было прервано. В следующий раз придется начать заново"));
+        return msg(chatId, "Заполнение анкеты было прервано. В следующий раз придется начать заново");
     }
 
     private static final String STOP_THE_FILL = "Остановить отправку анкеты";
@@ -148,9 +144,5 @@ public class QuestionnaireRecordingBlockable extends SimpleBlockable<Questionnai
     private void stopFillingOut(Long chatId) {
         helpers().get(chatId).setStarted(false);
         helpers().get(chatId).setQuestionnaire(new Questionnaire());
-    }
-
-    private SendResponse continueFilling(Long chatId, String messageText) {
-        return sender().sendResponse(new SendMessage(chatId, messageText));
     }
 }

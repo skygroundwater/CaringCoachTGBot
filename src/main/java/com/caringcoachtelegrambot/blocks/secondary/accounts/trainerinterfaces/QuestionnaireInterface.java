@@ -1,66 +1,96 @@
 package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces;
 
+import com.caringcoachtelegrambot.blocks.secondary.accounts.AccountInterface;
+import com.caringcoachtelegrambot.blocks.secondary.helpers.accounthelpers.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotFoundInDataBaseException;
+import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Questionnaire;
+import com.caringcoachtelegrambot.models.Trainer;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
+import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-import static com.caringcoachtelegrambot.utils.Constants.BACK;
+@Component
+public class QuestionnaireInterface extends AccountInterface<QuestionnaireInterface.CheckQuestionnaireHelper> {
 
-@Getter
-@Setter
-public class QuestionnaireInterface extends TrainerAccountInterface {
-
-    private Questionnaire questionnaire;
-
-    public QuestionnaireInterface(TrainerHelper helper) {
-        super(helper);
+    public QuestionnaireInterface(TelegramSender sender,
+                                  ServiceKeeper serviceKeeper) {
+        super(sender, serviceKeeper);
     }
 
+    @Getter
+    @Setter
+    public static class CheckQuestionnaireHelper extends TrainerHelper {
 
-    protected SendResponse execute(Long chatId, Message message) {
-        String txt = message.text();
-        if (!getHelper().isCheckingQuestionnaires()) {
-            getHelper().setCheckingQuestionnaires(true);
-            return sendQuestionnaire(chatId);
+        private Questionnaire questionnaire;
+
+        public CheckQuestionnaireHelper(Trainer trainer) {
+            super(trainer);
         }
-        return switching(chatId, message);
     }
 
     @Override
-    protected SendResponse switching(Long chatId, Message message) {
+    public SendResponse uniqueStartBlockMessage(Long chatId) {
+        signIn(chatId, new CheckQuestionnaireHelper(trainerService().findTrainerById(chatId)));
+        return msg(chatId, "Ты в разделе работы с анкетами твоих будущих атлетов", markup());
+    }
+
+    @Override
+    public List<String> buttons() {
+        return List.of("Просмотреть входящие анкеты");
+    }
+
+    @Override
+    protected SendResponse switching(Long chatId, Message message, CheckQuestionnaireHelper helper) {
+        String txt = message.text();
+        switch (txt) {
+            case "Назад" -> {
+                return goToBack(chatId);
+            }
+            case "Просмотреть входящие анкеты" -> {
+                return sendQuestionnaire(chatId, helper);
+            }
+        }
+        throw new NotValidDataException();
+    }
+
+    private ReplyKeyboardMarkup workMarkup() {
+        return backMarkup()
+                .addRow("Принять анкету")
+                .addRow("Отклонить анкету");
+    }
+
+    @Override
+    protected SendResponse work(Long chatId, Message message, CheckQuestionnaireHelper helper) {
         String txt = message.text();
         switch (txt) {
             case "Принять анкету" -> {
-                return acceptQuestionnaire(chatId);
+                return acceptQuestionnaire(chatId, helper.getQuestionnaire(), helper);
             }
             case "Отклонить анкету" -> {
-                return deleteQuestionnaire(chatId);
+                return deleteQuestionnaire(chatId, helper.getQuestionnaire(), helper);
             }
             case "Назад" -> {
-                return stop(chatId);
+                return forcedStop(chatId);
             }
         }
-        return sender().sendResponse(new SendMessage(chatId, "Вы в блоке проверки анкет. " +
-                "Если желаете выйти - жмите кнопку назад"));
+        return msg(chatId, "Вы в блоке проверки анкет. " +
+                "Если желаете выйти - жмите кнопку назад");
     }
 
-    protected SendResponse stop(Long chatId) {
-        getHelper().setCheckingQuestionnaires(false);
-        sender().sendResponse(new SendMessage(chatId, "Вы прервали проверку анкет"));
-        return getHelper().getTrainerAccountBlockable().uniqueStartBlockMessage(chatId);
-    }
-
-    public SendResponse sendQuestionnaire(Long chatId) {
+    public SendResponse sendQuestionnaire(Long chatId, CheckQuestionnaireHelper helper) {
         try {
-            questionnaire = questionnaireService().findNotCheckedQuestionnaire();
-            String info = String.format("""
+            helper.setWorking(true);
+            Questionnaire questionnaire = questionnaireService().findNotCheckedQuestionnaire();
+            helper.setQuestionnaire(questionnaire);
+            return msg(chatId, String.format("""
                             Анкета от %s %s.
                                                             
                             Рост: %s
@@ -90,38 +120,31 @@ public class QuestionnaireInterface extends TrainerAccountInterface {
                     questionnaire.getExperience(),
                     questionnaire.getNutrition(),
                     questionnaire.getEquipment(),
-                    questionnaire.getPreferences());
-            return sender().sendResponse(new SendMessage(chatId, info)
-                    .replyMarkup(markup()));
+                    questionnaire.getPreferences()), workMarkup());
         } catch (NotFoundInDataBaseException e) {
-            getHelper().setCheckingQuestionnaires(false);
-            sender().sendResponse(new SendMessage(chatId, "На данный момент анкет нет"));
-            return getHelper().getTrainerAccountBlockable().uniqueStartBlockMessage(chatId);
+            helper.setWorking(false);
+            msg(chatId, "На данный момент анкет нет");
+            return uniqueStartBlockMessage(chatId);
         }
     }
 
-    protected List<String> buttons() {
-        return List.of("Принять анкету",
-                "Отклонить анкету");
+    private SendResponse deleteQuestionnaire(Long chatId, Questionnaire questionnaire, CheckQuestionnaireHelper helper) {
+        questionnaireService().delete(questionnaire);
+        msg(questionnaire.getId(),
+                "Вашу анкету отклонил тренер. Вам лучше заполнить анкету заново");
+        msg(chatId, String.format("Анкета от %s отклонена",
+                questionnaire.getFirstName() + questionnaire.getSecondName()));
+        helper.questionnaire = null;
+        return sendQuestionnaire(chatId, helper);
     }
 
-    private SendResponse deleteQuestionnaire(Long chatId) {
-        questionnaireService().delete(this.questionnaire);
-        sender().sendResponse(new SendMessage(this.questionnaire.getId(),
-                "Вашу анкету отклонил тренер. Вам лучше заполнить анкету заново"));
-        sender().sendResponse(new SendMessage(chatId, String.format("Анкета от %s отклонена",
-                questionnaire.getFirstName() + this.questionnaire.getSecondName())));
-        this.questionnaire = null;
-        return sendQuestionnaire(chatId);
-    }
-
-    private SendResponse acceptQuestionnaire(Long chatId) {
-        this.questionnaire.setChecked(true);
-        questionnaireService().put(this.questionnaire);
-        sender().sendResponse(new SendMessage(this.questionnaire.getId(),
-                "Вашу анкету принял тренер. Теперь вы можете зарегистрироваться"));
-        this.questionnaire = new Questionnaire();
-        sender().sendResponse(new SendMessage(chatId, "Анкета проверена"));
-        return sendQuestionnaire(chatId);
+    private SendResponse acceptQuestionnaire(Long chatId, Questionnaire questionnaire, CheckQuestionnaireHelper helper) {
+        questionnaire.setChecked(true);
+        questionnaireService().put(questionnaire);
+        msg(questionnaire.getId(),
+                "Вашу анкету принял тренер. Теперь вы можете зарегистрироваться");
+        helper.questionnaire = null;
+        msg(chatId, "Анкета проверена");
+        return sendQuestionnaire(chatId, helper);
     }
 }

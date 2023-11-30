@@ -2,14 +2,14 @@ package com.caringcoachtelegrambot.models;
 
 import com.caringcoachtelegrambot.enums.Role;
 import com.caringcoachtelegrambot.models.inserts.Parameters;
-import jakarta.persistence.Table;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Column;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.OneToMany;
-import lombok.*;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.AccessLevel;
 
 import java.util.List;
 
@@ -39,6 +39,9 @@ public class Athlete extends Parameters {
 
     @OneToMany(mappedBy = "athlete")
     private List<OnlineTraining> trainings;
+
+    @ManyToOne(cascade = CascadeType.REFRESH, fetch = FetchType.EAGER)
+    private Trainer trainer;
 
     public Athlete buildParameters(String firstName, String secondName,
                                    String age, String height, String weight){

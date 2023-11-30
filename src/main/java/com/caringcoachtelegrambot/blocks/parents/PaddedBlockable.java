@@ -24,13 +24,8 @@ public abstract class PaddedBlockable<T extends Helper> extends SimpleBlockable<
         return node().getNextBlockable().uniqueStartBlockMessage(chatId);
     }
 
-    @Override
-    public final SendResponse jumpUnderHead(Long chatId) {
-        return goToNext(chatId);
-    }
-
-    @Override
-    public final SendResponse goDownTwoSteps(Long chatId) {
-        return goToBack(chatId);
+    protected SendResponse goTo(Long chatId, Blockable blockable) {
+        helpers().get(chatId).setIn(false);
+        return blockable.uniqueStartBlockMessage(chatId);
     }
 }

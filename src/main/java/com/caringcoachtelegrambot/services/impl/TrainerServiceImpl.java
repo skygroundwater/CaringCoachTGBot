@@ -25,10 +25,13 @@ public class TrainerServiceImpl extends AbstractRepoService<Trainer, Long> imple
     }
 
     @Override
-    @Cacheable(value = "trainer")
-    public Trainer getTrainer() {
-        TrainerRepository repository = (TrainerRepository) getRepository();
-        return repository.findAll().stream()
-                .findAny().orElseThrow(NotFoundInDataBaseException::new);
+    @Cacheable(value = "trainers")
+    public Trainer findTrainerById(Long chatId) {
+        return getRepository().findById(chatId).orElseThrow(NotFoundInDataBaseException::new);
+    }
+
+    @Override
+    public Trainer findTrainerByAthleteId(Long athleteId) {
+        return ((TrainerRepository) getRepository()).findTrainerByAthleteId(athleteId);
     }
 }

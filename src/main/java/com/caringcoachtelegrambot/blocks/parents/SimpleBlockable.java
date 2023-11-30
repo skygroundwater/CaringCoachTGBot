@@ -7,45 +7,40 @@ import com.caringcoachtelegrambot.services.*;
 import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
+import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 @Setter
 @Getter
+@RequiredArgsConstructor
 public abstract class SimpleBlockable<T extends Helper> implements BlockableForBackStep {
 
     private final TelegramSender sender;
 
-    private final Node node;
-
-    private final ConcurrentMap<Long, T> helpers;
-
     private final ServiceKeeper serviceKeeper;
 
-    public SimpleBlockable(TelegramSender sender,
-                           ServiceKeeper serviceKeeper) {
-        this.serviceKeeper = serviceKeeper;
-        this.sender = sender;
-        this.node = new Node();
-        this.helpers = new ConcurrentHashMap<>();
-    }
+    private final Node node = new Node();
+
+    private final ConcurrentMap<Long, T> helpers = new ConcurrentHashMap<>();
 
     public abstract SendResponse process(Long chatId, Message message);
 
     public SendResponse block(Long chatId, Message message) {
-        String txt = message.text();
-        if (txt != null && !txt.isEmpty()) {
-            try {
-                return process(chatId, message);
-            } catch (NotValidDataException e) {
-                return sender.sendResponse(new SendMessage(chatId, e.getMessage()));
-            }
-        } else return sender.sendResponse(new SendMessage(chatId, "Пустое сообщение"));
+        try {
+            return process(chatId, message);
+        } catch (NotValidDataException e) {
+            return sender.sendResponse(new SendMessage(chatId, e.getMessage()));
+        }
     }
 
     public final TelegramSender sender() {
@@ -98,10 +93,7 @@ public abstract class SimpleBlockable<T extends Helper> implements BlockableForB
 
     @Override
     public final SendResponse goToBack(Long chatId) {
-        Helper helper = helpers.get(chatId);
-        if (helper != null) {
-            helper.setIn(false);
-        }
+        helpers.get(chatId).setIn(false);
         return node.getPrevBlockable().uniqueStartBlockMessage(chatId);
     }
 
@@ -109,8 +101,25 @@ public abstract class SimpleBlockable<T extends Helper> implements BlockableForB
         return sender.sendResponse(new SendMessage(chatId, txt));
     }
 
+    protected final SendResponse msg(Long chatId, String txt, ReplyKeyboardMarkup markup) {
+        return sender.sendResponse(new SendMessage(chatId, txt).replyMarkup(markup));
+    }
+
+    protected ReplyKeyboardMarkup markup() {
+        ReplyKeyboardMarkup markup = backMarkup();
+        buttons().forEach(markup::addRow);
+        return markup;
+    }
+
     @Override
     public final void setPrevBlockable(Blockable blockable) {
         node.setPrevBlockable(blockable);
+    }
+
+    @Override
+    public <E extends Helper> void signIn(Long chatId, E helper) {
+        if(helpers.containsKey(chatId)) {
+            helpers.get(chatId).setIn(true);
+        } else helpers.put(chatId, (T) helper);
     }
 }

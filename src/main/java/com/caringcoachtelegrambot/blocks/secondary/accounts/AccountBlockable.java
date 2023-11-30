@@ -1,5 +1,6 @@
-package com.caringcoachtelegrambot.blocks.parents;
+package com.caringcoachtelegrambot.blocks.secondary.accounts;
 
+import com.caringcoachtelegrambot.blocks.parents.PaddedBlockable;
 import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
 import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
@@ -16,7 +17,8 @@ public abstract class AccountBlockable<H extends Helper> extends PaddedBlockable
 
     @Override
     public final ReplyKeyboardMarkup markup() {
-        return new ReplyKeyboardMarkup("Выйти из личного кабинета")
-                .addRow("Редактировать аккаунт");
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup("Выйти из личного кабинета", "Редактировать аккаунт");
+        buttons().forEach(markup::addRow);
+        return markup;
     }
 }

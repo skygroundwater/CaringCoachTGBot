@@ -1,162 +1,163 @@
 package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces;
 
-import com.caringcoachtelegrambot.exceptions.NotFoundInDataBaseException;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.AccountInterface;
+import com.caringcoachtelegrambot.blocks.secondary.helpers.accounthelpers.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.FAQ;
+import com.caringcoachtelegrambot.models.Trainer;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
+import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 import static com.caringcoachtelegrambot.utils.Constants.BACK;
 
-@Getter
-@Setter
-public class FAQInterface extends TrainerAccountInterface {
+@Component
+public class FAQInterface extends AccountInterface<FAQInterface.FAQHelper> {
 
-    private FAQ faq;
-
-    private boolean answering;
-
-    private boolean questionOnScreen;
-
-    public FAQInterface(TrainerHelper helper) {
-        super(helper);
-        answering = false;
+    public FAQInterface(TelegramSender sender, ServiceKeeper serviceKeeper) {
+        super(sender, serviceKeeper);
     }
 
+    @Setter
+    @Getter
+    public static class FAQHelper extends TrainerHelper {
 
-    public SendResponse execute(Long chatId, Message message) {
-        String txt = message.text();
-        getHelper().setAnsweringFAQs(true);
-        if (this.answering) {
-            return setAnswer(chatId, txt);
-        } else if (!this.questionOnScreen) {
-            return sendQuestionWithoutAnswer(chatId);
-        } else return switching(chatId, message);
+        private FAQ faq;
+
+        private boolean answerProcess;
+
+        private boolean newFAQProcess;
+
+        public FAQHelper(Trainer trainer) {
+            super(trainer);
+        }
     }
 
     @Override
-    protected SendResponse switching(Long chatId, Message message) {
+    public SendResponse uniqueStartBlockMessage(Long chatId) {
+        signIn(chatId, new FAQHelper(trainerService().findTrainerById(chatId)));
+        return msg(chatId, "Раздел работы с популярными вопросами", markup());
+    }
+
+    @Override
+    protected SendResponse switching(Long chatId, Message message, FAQHelper helper) {
         String txt = message.text();
         switch (txt) {
-            case "Отправить ответ" -> {
-                return startAnswering(chatId);
-            }
-            case "Отклонить вопрос" -> {
-                return rejectFAQ(chatId);
-            }
             case "Назад" -> {
-                return stop(chatId);
+                return goToBack(chatId);
+            }
+            case "Добавить новый FAQ" -> {
+                return startAdditionNewFAQ(chatId, helper);
+            }
+            case "Ответить на заданные вопросы" -> {
+                return startAnswering(chatId, helper);
             }
         }
         throw new NotValidDataException();
     }
 
-    private SendResponse startAnswering(Long chatId) {
-        this.answering = true;
-        return sender().sendResponse(new SendMessage(chatId, "Ваш ответ должен быть в следующем сообщении")
-                .replyMarkup(new ReplyKeyboardMarkup("Не отвечать на вопрос").oneTimeKeyboard(true)));
+    @Override
+    public List<String> buttons() {
+        return List.of(
+                "Ответить на заданные вопросы",
+                "Добавить новый FAQ");
     }
 
-    private SendResponse setAnswer(Long chatId, String answer) {
-        if (answer.equals("Не отвечать на вопрос")) {
-            this.answering = false;
-            return sendQuestionWithoutAnswer(chatId);
+    @Override
+    protected SendResponse work(Long chatId, Message message, FAQHelper helper) {
+        if (helper.answerProcess && !helper.newFAQProcess) {
+            return answeringProcess(chatId, message, helper);
+        } else if (helper.newFAQProcess && !helper.answerProcess) {
+            return newFAQProcess(chatId, message, helper);
         }
-        faq.setAnswer(answer);
-        String answerForAthlete =
-                String.format("""
-                        Тренер ответил на ваш вопрос: %s
-                                                
-                        Ответ: %s
-                        """, faq.getQuestion(), faq.getAnswer());
-        faqService().post(faq);
-        sender().sendResponse(new SendMessage(faq.getAthleteId(), answerForAthlete));
-        answering = false;
-        questionOnScreen = false;
-        sender().sendResponse(new SendMessage(chatId, "Вы ответили на вопрос и ответ отправлен тому, кто его задал"));
-        return sendQuestionWithoutAnswer(chatId);
+        throw new NotValidDataException();
     }
 
-    protected SendResponse stop(Long chatId) {
-        this.answering = false;
-        questionOnScreen = false;
-        getHelper().setAnsweringFAQs(false);
-        return getHelper().getTrainerAccountBlockable().uniqueStartBlockMessage(chatId);
+    //БЛОК МЕТОДОВ ПО РАБОТЕ С ОТВЕТАМИ НА ВОПРОСЫ
+    private SendResponse startAnswering(Long chatId, FAQHelper helper) {
+        helper.setWorking(true);
+        helper.setAnswerProcess(true);
+        return sendFAQToTrainer(chatId, helper);
     }
 
-    private SendResponse rejectFAQ(Long chatId) {
-        faqService().delete(faq);
-        questionOnScreen = false;
-        sender().sendResponse(new SendMessage(faq.getAthleteId(), "Ваш вопрос был отклонен тренером"));
-        sender().sendResponse(new SendMessage(chatId, "Вы отклонили вопрос"));
-        faq = null;
-        return sendQuestionWithoutAnswer(chatId);
-    }
-
-    private SendResponse sendQuestionWithoutAnswer(Long chatId) {
-        try {
-            faq = faqService().findFAQWithoutAnswer();
-            if (faq != null) {
-                questionOnScreen = true;
-                return sender().sendResponse(
-                        new SendMessage(chatId, faq.getQuestion())
-                                .replyMarkup(markup()));
-            }
-        } catch (NotFoundInDataBaseException e) {
-            getHelper().setAnsweringFAQs(false);
-            return sender()
-                    .sendResponse(new SendMessage(chatId, "Актуальных вопросов более нет"));
-        }
-        getHelper().setAnsweringFAQs(false);
-        return sender()
-                .sendResponse(new SendMessage(chatId, "Актуальных вопросов более нет"));
-    }
-
-
-    protected List<String> buttons() {
-        return List.of("Отправить ответ", "Отклонить вопрос");
-    }
-
-    public SendResponse newFaq(Long chatId, String txt) {
-        if (txt.equals("Не отпралять FAQ")) {
-            return stopAdding(chatId);
-        } else if (faq == null) {
-            return startAdding(chatId);
-        } else if (faq.getQuestion() == null) {
-            faq.setQuestion(txt);
-            return sender().sendResponse(new SendMessage(chatId, "Cледующим сообщением отправь ответ"));
+    private SendResponse answeringProcess(Long chatId, Message message, FAQHelper helper) {
+        String value = message.text();
+        if (value.equals(BACK)) {
+            return stopAnswering(chatId, helper);
         } else {
-            faq.setAnswer(txt);
-            getHelper().setAddingNewFaq(false);
-            faqService().post(faq);
-            faq = null;
-            sender().sendResponse(new SendMessage(chatId, "Вы добавили новый FAQ"));
-            return getHelper().getTrainerAccountBlockable().uniqueStartBlockMessage(chatId);
+            return setAnswerForFAQ(chatId, value, helper);
         }
     }
 
-    private SendResponse stopAdding(Long chatId) {
-        getHelper().setAddingNewFaq(false);
-        faq = null;
-        sender().sendResponse(new SendMessage(chatId, "Вы не стали добавлять новый FAQ"));
-        return getHelper().getTrainerAccountBlockable().uniqueStartBlockMessage(chatId);
+    private SendResponse sendFAQToTrainer(Long chatId, FAQHelper helper) {
+        helper.setFaq(faqService().findFAQWithoutAnswer());
+        if (helper.getFaq() == null) {
+            return stopAnswering(chatId, helper);
+        } else {
+            msg(chatId, helper.getFaq().getQuestion());
+            return msg(chatId, "Ответ должен быть в следующем сообщении", backMarkup());
+        }
     }
 
-    private SendResponse startAdding(Long chatId) {
-        getHelper().setAddingNewFaq(true);
-        faq = new FAQ();
-        faq.setAthleteId(chatId);
-        return sender().sendResponse(new SendMessage(chatId, "Следующим сообщением отправь вопрос")
-                .replyMarkup(markupForAdding()));
+    private SendResponse stopAnswering(Long chatId, FAQHelper helper) {
+        helper.setAnswerProcess(false);
+        helper.setWorking(false);
+        helper.setFaq(null);
+        return uniqueStartBlockMessage(chatId);
     }
 
-    private ReplyKeyboardMarkup markupForAdding() {
-        return new ReplyKeyboardMarkup("Не отпралять FAQ");
+    private SendResponse setAnswerForFAQ(Long chatId, String answer, FAQHelper helper) {
+        FAQ faq = helper.faq;
+        faq.setAnswer(answer);
+        faqService().put(faq);
+        msg(faq.getAthleteId(), String.format("""
+                Тренер ответил на ваш вопрос: %s
+                                        
+                Ответ: %s
+                """, faq.getQuestion(), faq.getAnswer()));
+        return sendFAQToTrainer(chatId, helper);
+    }
+
+    //БЛОК МЕТОДОВ ПО РАБОТЕ С ДОБАВЛЕНИЕМ НОВЫХ ВОПРОСОВ
+
+    private SendResponse startAdditionNewFAQ(Long chatId, FAQHelper helper) {
+        helper.setWorking(true);
+        helper.setNewFAQProcess(true);
+        helper.setFaq(new FAQ());
+        return msg(chatId, "Следующим сообщением отправь вопрос, на который будешь отвечать");
+    }
+
+    private SendResponse newFAQProcess(Long chatId, Message message, FAQHelper helper) {
+        String value = message.text();
+        if (value.equals(BACK)) {
+            return stopNewFAQProcess(chatId, helper);
+        } else {
+            return setValuesForFAQ(chatId, value, helper);
+        }
+    }
+
+    private SendResponse setValuesForFAQ(Long chatId, String value, FAQHelper helper) {
+        FAQ faq = helper.faq;
+        if (faq.getQuestion().isBlank() && faq.getAnswer().isBlank()) {
+            faq.setAnswer(value);
+            return msg(chatId, "Следующим сообщением отправь ответ");
+        } else if (!faq.getQuestion().isBlank() && faq.getAnswer().isBlank()) {
+            faq.setAnswer(value);
+            return msg(chatId, "Вы ответили на популярный вопрос");
+        }
+        throw new NotValidDataException();
+    }
+
+    private SendResponse stopNewFAQProcess(Long chatId, FAQHelper helper) {
+        helper.setFaq(null);
+        helper.setNewFAQProcess(false);
+        helper.setWorking(false);
+        return uniqueStartBlockMessage(chatId);
     }
 }

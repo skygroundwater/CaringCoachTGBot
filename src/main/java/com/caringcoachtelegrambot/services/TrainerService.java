@@ -7,5 +7,7 @@ public interface TrainerService extends Service<Trainer, Long> {
 
     PasswordEncoder getEncoder();
 
-    Trainer getTrainer();
+    Trainer findTrainerById(Long chatId);
+
+    Trainer findTrainerByAthleteId(Long athleteId);
 }

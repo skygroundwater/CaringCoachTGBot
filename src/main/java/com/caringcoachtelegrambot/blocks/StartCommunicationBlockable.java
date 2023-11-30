@@ -14,8 +14,6 @@ import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import jakarta.annotation.PostConstruct;
 import lombok.Data;
@@ -23,6 +21,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 @Getter
@@ -103,23 +103,16 @@ public class StartCommunicationBlockable extends PaddedBlockable<StartCommunicat
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new StartCommunicationHelper());
-        return sender().sendResponse(new SendMessage(chatId, "Привет!")
-                .replyMarkup(markup()));
-    }
-
-    private SendResponse goTo(Long chatId, Blockable blockable) {
-        helpers().get(chatId).setIn(false);
-        return blockable.uniqueStartBlockMessage(chatId);
+        signIn(chatId, new StartCommunicationHelper());
+        return msg(chatId, "Привет!", markup());
     }
 
     @Override
-    public ReplyKeyboardMarkup markup() {
-        return new ReplyKeyboardMarkup("Блок информации о тренере")
-                .addRow("Ответы на часто задаваемые вопросы")
-                .addRow("Отправить анкету")
-                .addRow("Прайс-лист")
-                .addRow("Регистрация")
-                .addRow("Личный кабинет").oneTimeKeyboard(true);
+    public List<String> buttons() {
+        return List.of("Блок информации о тренере",
+                "Ответы на часто задаваемые вопросы",
+                "Отправить анкету", "Прайс-лист",
+                "Регистрация",
+                "Личный кабинет");
     }
 }

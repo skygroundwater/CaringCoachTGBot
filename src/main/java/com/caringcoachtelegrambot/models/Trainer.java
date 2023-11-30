@@ -1,11 +1,10 @@
 package com.caringcoachtelegrambot.models;
 
 import com.caringcoachtelegrambot.models.inserts.CaringCoachBotModel;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
 @Entity
@@ -19,6 +18,15 @@ public class Trainer extends CaringCoachBotModel {
 
     @Id
     private Long id;
+
+    @Column(name = "firstname")
+    private String firstName;
+
+    @Column(name = "second_name")
+    private String secondName;
+
+    @Column(name = "sur_name")
+    private String surName;
 
     @Column(name = "about")
     private String about;
@@ -37,4 +45,7 @@ public class Trainer extends CaringCoachBotModel {
 
     @Column(name = "dietary_guide")
     private String dietaryGuide;
+
+    @OneToMany(mappedBy = "trainer")
+    private List<Athlete> athletes;
 }

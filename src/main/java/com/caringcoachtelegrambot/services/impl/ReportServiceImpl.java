@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ReportServiceImpl extends AbstractRepoService<Report, Long> implements ReportService {
+
     public ReportServiceImpl(ReportRepository repository) {
         super(repository);
     }

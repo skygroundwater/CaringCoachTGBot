@@ -6,12 +6,12 @@ import com.caringcoachtelegrambot.models.FAQ;
 import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class FAQBlockable extends PaddedBlockable<FAQBlockable.FAQHelper> {
@@ -26,7 +26,7 @@ public class FAQBlockable extends PaddedBlockable<FAQBlockable.FAQHelper> {
 
     @EqualsAndHashCode(callSuper = true)
     @Data
-    public static class FAQHelper extends Helper {
+    protected static class FAQHelper extends Helper {
 
         private boolean asking;
 
@@ -63,21 +63,20 @@ public class FAQBlockable extends PaddedBlockable<FAQBlockable.FAQHelper> {
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new FAQHelper());
-        return sender().sendResponse(new SendMessage(chatId, "Блок для вопросов")
-                .replyMarkup(markup()));
+        signIn(chatId, new FAQHelper());
+        return msg(chatId, "Блок для вопросов", markup());
     }
 
     @Override
-    public ReplyKeyboardMarkup markup() {
-        return backMarkup().addRow("Вы можете задать свой вопрос")
-                .addRow("Популярные вопросы").oneTimeKeyboard(true);
+    public List<String> buttons() {
+        return List.of(
+                "Вы можете задать свой вопрос",
+                "Популярные вопросы");
     }
 
     private SendResponse ask(Long chatId) {
         helpers().get(chatId).setAsking(true);
-        return sender().sendResponse(new SendMessage(chatId,
-                "Следующим сообщением задайте вопрос"));
+        return msg(chatId, "Следующим сообщением задайте вопрос");
     }
 
     private SendResponse stopAsking(Long chatId, String question) {

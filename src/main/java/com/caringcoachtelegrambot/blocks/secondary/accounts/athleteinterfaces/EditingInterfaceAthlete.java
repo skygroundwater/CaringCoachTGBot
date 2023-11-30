@@ -1,11 +1,12 @@
-package com.caringcoachtelegrambot.blocks.secondary.accounts.athletehelper;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.athleteinterfaces;
 
+import com.caringcoachtelegrambot.blocks.secondary.accounts.AccountInterface;
+import com.caringcoachtelegrambot.blocks.secondary.helpers.accounthelpers.AthleteHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Athlete;
 import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import org.springframework.stereotype.Component;
 
@@ -14,7 +15,7 @@ import java.util.List;
 import static com.caringcoachtelegrambot.utils.Constants.BACK;
 
 @Component
-public class EditingInterfaceAthlete extends AthleteAccountInterface<EditingInterfaceAthlete.EditingHelper> {
+public class EditingInterfaceAthlete extends AccountInterface<EditingInterfaceAthlete.EditingHelper> {
 
     public EditingInterfaceAthlete(TelegramSender sender,
                                    ServiceKeeper serviceKeeper) {
@@ -40,13 +41,12 @@ public class EditingInterfaceAthlete extends AthleteAccountInterface<EditingInte
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new EditingHelper(athleteService().findById(chatId)));
-        return sender().sendResponse(new SendMessage(chatId, "Раздел редактирования")
-                .replyMarkup(markup()));
+        signIn(chatId, new EditingHelper(athleteService().findById(chatId)));
+        return msg(chatId, "Раздел редактирования", markup());
     }
 
     @Override
-    protected List<String> buttons() {
+    public List<String> buttons() {
         return List.of("Изменить логин",
                 "Изменить пароль",
                 "Изменить имя",
@@ -94,50 +94,50 @@ public class EditingInterfaceAthlete extends AthleteAccountInterface<EditingInte
     private SendResponse setName(Long chatId, EditingHelper helper) {
         helper.name = true;
         helper.setWorking(true);
-        return intermediateMsg(chatId, "Введите новое имя");
+        return msg(chatId, "Введите новое имя", backMarkup());
     }
 
     private SendResponse setSecondName(Long chatId, EditingHelper helper) {
         helper.secondName = true;
         helper.setWorking(true);
-        return intermediateMsg(chatId, "Введите новую фамилию");
+        return msg(chatId, "Введите новую фамилию", backMarkup());
     }
 
     private SendResponse setHeight(Long chatId, EditingHelper helper) {
         helper.height = true;
         helper.setWorking(true);
-        return intermediateMsg(chatId, "Введите ваш рост");
+        return msg(chatId, "Введите ваш рост", backMarkup());
     }
 
     private SendResponse setWeight(Long chatId, EditingHelper helper) {
         helper.weight = true;
         helper.setWorking(true);
-        return intermediateMsg(chatId, "Введите ваш вес");
+        return msg(chatId, "Введите ваш вес", backMarkup());
     }
 
     private SendResponse setAge(Long chatId, EditingHelper helper) {
         helper.age = true;
         helper.setWorking(true);
-        return intermediateMsg(chatId, "Введите ваш возраст");
+        return msg(chatId, "Введите ваш возраст", backMarkup());
     }
 
     private SendResponse setPassword(Long chatId, EditingHelper helper) {
         helper.waitingOldPassword = true;
         helper.setWorking(true);
-        return intermediateMsg(chatId, "Введите ваш старый пароль");
+        return msg(chatId, "Введите ваш старый пароль", backMarkup());
     }
 
     private SendResponse confirmOldPass(Long chatId, String oldPass, EditingHelper helper) {
         if (trainerService().getEncoder().matches(oldPass, helper.getAthlete().getPassword())) {
             helper.confirmedPassword = true;
-            return intermediateMsg(chatId, "Введите ваш новый пароль");
-        } else return intermediateMsg(chatId, "Вы неверно ввели старый пароль. Попробуйте снова");
+            return msg(chatId, "Введите ваш новый пароль", backMarkup());
+        } else return msg(chatId, "Вы неверно ввели старый пароль. Попробуйте снова", backMarkup());
     }
 
     private SendResponse setLogin(Long chatId, EditingHelper helper) {
         helper.login = true;
         helper.setWorking(true);
-        return intermediateMsg(chatId, "Введите новый логин");
+        return msg(chatId, "Введите новый логин", backMarkup());
     }
 
     @Override
@@ -155,7 +155,7 @@ public class EditingInterfaceAthlete extends AthleteAccountInterface<EditingInte
         } else if (helper.waitingOldPassword && helper.confirmedPassword && helper.newPassword) {
             if (helper.newPass.equals(value)) {
                 athlete.setPassword(trainerService().getEncoder().encode(value));
-            } else return intermediateMsg(chatId, "Вы не смогли подтвердить пароль. Попробуйте снова");
+            } else return msg(chatId, "Вы не смогли подтвердить пароль. Попробуйте снова", backMarkup());
         } else if (helper.name) {
             athlete.setFirstName(value);
         } else if (helper.secondName) {
@@ -167,15 +167,13 @@ public class EditingInterfaceAthlete extends AthleteAccountInterface<EditingInte
         } else if (helper.age) {
             athlete.setAge(value);
         }
-        helpers().put(chatId,
-                new EditingHelper(athleteService().put(athlete)));
         msg(chatId, "Вы успешно изменили данные");
         return uniqueStartBlockMessage(chatId);
     }
 
-    private SendResponse keepNewPass(Long chatId, String field, EditingHelper helper) {
-        helper.newPass = field;
+    private SendResponse keepNewPass(Long chatId, String newPass, EditingHelper helper) {
+        helper.newPass = newPass;
         helper.newPassword = true;
-        return intermediateMsg(chatId, "Повторно введите новый пароль");
+        return msg(chatId, "Повторно введите новый пароль", backMarkup());
     }
 }

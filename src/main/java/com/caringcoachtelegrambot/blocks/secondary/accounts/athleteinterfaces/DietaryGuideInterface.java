@@ -1,5 +1,7 @@
-package com.caringcoachtelegrambot.blocks.secondary.accounts.athletehelper;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.athleteinterfaces;
 
+import com.caringcoachtelegrambot.blocks.secondary.accounts.AccountInterface;
+import com.caringcoachtelegrambot.blocks.secondary.helpers.accounthelpers.AthleteHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Athlete;
 import com.caringcoachtelegrambot.models.FAQ;
@@ -15,8 +17,7 @@ import java.util.List;
 import static com.caringcoachtelegrambot.utils.Constants.BACK;
 
 @Component
-public class DietaryGuideInterface extends AthleteAccountInterface<DietaryGuideInterface.DietaryGuideHelper> {
-
+public class DietaryGuideInterface extends AccountInterface<DietaryGuideInterface.DietaryGuideHelper> {
 
     public DietaryGuideInterface(TelegramSender sender,
                                  ServiceKeeper serviceKeeper) {
@@ -34,13 +35,15 @@ public class DietaryGuideInterface extends AthleteAccountInterface<DietaryGuideI
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new DietaryGuideHelper(athleteService().findById(chatId)));
+        if (!helpers().containsKey(chatId)) {
+            helpers().put(chatId, new DietaryGuideHelper(athleteService().findById(chatId)));
+        }
         return sender().sendResponse(new SendMessage(chatId, "Вы в блоке памятки по питанию")
                 .replyMarkup(markup()));
     }
 
     @Override
-    protected List<String> buttons() {
+    public List<String> buttons() {
         return List.of("Общие наставления");
     }
 
@@ -60,9 +63,12 @@ public class DietaryGuideInterface extends AthleteAccountInterface<DietaryGuideI
 
     private SendResponse dietaryGuide(Long chatId, DietaryGuideHelper helper) {
         helper.setWorking(true);
-        return sender().sendResponse(new SendMessage(chatId,
-                trainerService().getTrainer().getDietaryGuide())
-                .replyMarkup(backMarkup().addRow("Остался вопрос")));
+        return msg(chatId,
+                trainerService()
+                        .findTrainerByAthleteId(chatId)
+                        .getDietaryGuide(),
+                backMarkup()
+                        .addRow("Остался вопрос"));
     }
 
     @Override
@@ -84,7 +90,7 @@ public class DietaryGuideInterface extends AthleteAccountInterface<DietaryGuideI
         if (message.text().equals(BACK)) {
             return forcedStop(chatId);
         }
-        msg(trainerService().getTrainer().getId(), "Атлет пожелал ответа на вопрос. *" + question + "*");
+        msg(trainerService().findTrainerByAthleteId(chatId).getId(), "Атлет пожелал ответа на вопрос. *" + question + "*");
         msg(chatId, "Вы отправили вопрос тренеру");
         faqService().post(new FAQ(question, chatId));
         return forcedStop(chatId);
@@ -92,6 +98,6 @@ public class DietaryGuideInterface extends AthleteAccountInterface<DietaryGuideI
 
     private SendResponse ask(Long chatId, DietaryGuideHelper helper) {
         helper.asking = true;
-        return intermediateMsg(chatId, "Следующим сообщением задайте вопрос");
+        return msg(chatId, "Следующим сообщением задайте вопрос", backMarkup());
     }
 }

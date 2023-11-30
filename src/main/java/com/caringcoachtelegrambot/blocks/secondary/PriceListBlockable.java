@@ -6,12 +6,12 @@ import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class PriceListBlockable extends SimpleBlockable<PriceListBlockable.PriceListHelper> {
@@ -50,30 +50,26 @@ public class PriceListBlockable extends SimpleBlockable<PriceListBlockable.Price
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new PriceListHelper());
-        return sender().sendResponse(new SendMessage(chatId, "Блок прайс листов")
-                .replyMarkup(markup()));
+        signIn(chatId, new PriceListHelper());
+        return msg(chatId, "Блок прайс листов", markup());
     }
 
     @Override
-    public ReplyKeyboardMarkup markup() {
-        return backMarkup().addRow("Персональное ведение")
-                .addRow("Разовая тренировка")
-                .addRow("Абонементы");
+    public List<String> buttons() {
+        return List.of("Персональное ведение",
+                "Разовая тренировка",
+                "Абонементы");
     }
 
     private SendResponse personalManagement(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, " персональное ведение ")
-                .replyMarkup(markup()));
+        return msg(chatId, " персональное ведение ", markup());
     }
 
     private SendResponse oneTimeTraining(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, " разовые тренировки ")
-                .replyMarkup(markup()));
+        return msg(chatId, " разовые тренировки ", markup());
     }
 
     private SendResponse subscriptions(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, " абонементы ")
-                .replyMarkup(markup()));
+        return msg(chatId, " абонементы ", markup());
     }
 }

@@ -1,13 +1,12 @@
-package com.caringcoachtelegrambot.blocks.secondary.accounts.athletehelper;
+package com.caringcoachtelegrambot.blocks.secondary.helpers.accounthelpers;
 
-import com.caringcoachtelegrambot.blocks.secondary.helpers.Helper;
 import com.caringcoachtelegrambot.models.Athlete;
 import lombok.Getter;
 import lombok.Setter;
 
 @Setter
 @Getter
-public class AthleteHelper extends Helper {
+public class AthleteHelper extends AccountHelper {
 
     private Athlete athlete;
     private boolean working;

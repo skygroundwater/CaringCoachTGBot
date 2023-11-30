@@ -1,77 +1,62 @@
 package com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces;
 
+import com.caringcoachtelegrambot.blocks.secondary.accounts.AccountInterface;
+import com.caringcoachtelegrambot.blocks.secondary.helpers.accounthelpers.TrainerHelper;
 import com.caringcoachtelegrambot.exceptions.NotFoundInDataBaseException;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Report;
+import com.caringcoachtelegrambot.models.Trainer;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
+import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-public class ReportCheckingInterface extends TrainerAccountInterface {
+@Component
+public class ReportCheckingInterface extends AccountInterface<ReportCheckingInterface.ReportCheckingHelper> {
 
-    private Report report;
+    public ReportCheckingInterface(TelegramSender sender, ServiceKeeper serviceKeeper) {
+        super(sender, serviceKeeper);
+    }
 
-    private boolean reportOnScreen;
+    @Setter
+    @Getter
+    public static class ReportCheckingHelper extends TrainerHelper {
 
-    public ReportCheckingInterface(TrainerHelper helper) {
-        super(helper);
+        private Report report;
+
+        public ReportCheckingHelper(Trainer trainer) {
+            super(trainer);
+        }
     }
 
     @Override
-    protected List<String> buttons() {
+    public List<String> buttons() {
         return List.of("Взять отчёт");
     }
 
-    private SendResponse uniqueStartMessage(Long chatId) {
-        getHelper().setCheckingReports(true);
-        return sender().sendResponse(
-                new SendMessage(chatId, "Ты в блоке проверки отчетов")
-                        .replyMarkup(markup()));
-    }
-
-    public SendResponse execute(Long chatId, Message message) {
-        if (!getHelper().isCheckingReports()) return uniqueStartMessage(chatId);
-        if (reportOnScreen) return taskExecution(chatId, message);
-        return switching(chatId, message);
-    }
-
-    private SendResponse taskExecution(Long chatId, Message message) {
-        String txt = message.text();
-        switch (txt) {
-            case "Принять отчет" -> {
-                return acceptReport(chatId);
-            }
-            case "Назад" -> {
-                return back(chatId);
-            }
-        }
-        throw new NotValidDataException();
-    }
-
     @Override
-    protected SendResponse switching(Long chatId, Message message) {
+    protected SendResponse switching(Long chatId, Message message, ReportCheckingHelper helper) {
         String txt = message.text();
         switch (txt) {
             case "Взять отчёт" -> {
-                return sendReport(chatId);
+                return sendReport(chatId, helper);
             }
             case "Назад" -> {
-                return stop(chatId);
+                return goToBack(chatId);
             }
         }
         throw new NotValidDataException();
     }
 
-    protected SendResponse stop(Long chatId) {
-        getHelper().setCheckingReports(false);
-        return getHelper().getTrainerAccountBlockable().uniqueStartBlockMessage(chatId);
-    }
-
-    private SendResponse sendReport(Long chatId) {
+    private SendResponse sendReport(Long chatId, ReportCheckingHelper helper) {
         try {
-            report = reportService().findOneUncheckedReport();
+            helper.setWorking(true);
+            Report report = reportService().findOneUncheckedReport();
             String reportInfo = String.format("""
                             *Отчет от атлета:* %s
                                             
@@ -86,25 +71,43 @@ public class ReportCheckingInterface extends TrainerAccountInterface {
                             """, report.getAthlete().getFirstName(),
                     report.getState(), report.getEmotion(),
                     report.getWeight(), report.getWishes());
-            reportOnScreen = true;
-            return sender().sendResponse(new SendMessage(chatId, reportInfo)
-                    .replyMarkup(backMarkup().addRow("Принять отчет")));
-        }catch (NotFoundInDataBaseException e){
+            helper.setReport(report);
+            return msg(chatId, reportInfo, backMarkup().addRow("Принять отчет"));
+        } catch (NotFoundInDataBaseException e) {
             msg(chatId, "Отчетов нет");
-            return uniqueStartMessage(chatId);
+            return uniqueStartBlockMessage(chatId);
         }
     }
 
-    private SendResponse acceptReport(Long chatId) {
-        report.setChecked(true);
-        reportService().post(report);
-        return sendReport(chatId);
+    @Override
+    protected SendResponse work(Long chatId, Message message, ReportCheckingHelper helper) {
+        String txt = message.text();
+        switch (txt) {
+            case "Принять отчет" -> {
+                return acceptReport(chatId, helper);
+            }
+            case "Назад" -> {
+                return back(chatId, helper);
+            }
+        }
+        throw new NotValidDataException();
     }
 
-    private SendResponse back(Long chatId) {
-        report = null;
-        reportOnScreen = false;
-        return uniqueStartMessage(chatId);
+    private SendResponse acceptReport(Long chatId, ReportCheckingHelper helper) {
+        helper.report.setChecked(true);
+        reportService().post(helper.report);
+        return sendReport(chatId, helper);
     }
 
+    private SendResponse back(Long chatId, ReportCheckingHelper helper) {
+        helper.report = null;
+        helper.setWorking(false);
+        return uniqueStartBlockMessage(chatId);
+    }
+
+    @Override
+    public SendResponse uniqueStartBlockMessage(Long chatId) {
+        signIn(chatId, new ReportCheckingHelper(trainerService().findTrainerById(chatId)));
+        return msg(chatId, "Ты в блоке проверки отчетов", markup());
+    }
 }

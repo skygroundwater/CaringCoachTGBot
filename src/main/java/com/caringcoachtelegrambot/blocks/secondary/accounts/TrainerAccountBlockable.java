@@ -1,17 +1,14 @@
 package com.caringcoachtelegrambot.blocks.secondary.accounts;
 
-import com.caringcoachtelegrambot.blocks.parents.AccountBlockable;
-import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces.TrainerHelper;
+import com.caringcoachtelegrambot.blocks.secondary.helpers.accounthelpers.TrainerHelper;
+import com.caringcoachtelegrambot.blocks.secondary.accounts.trainerinterfaces.*;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.model.request.KeyboardButton;
-import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
+import jakarta.annotation.PostConstruct;
 import lombok.Getter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -20,81 +17,79 @@ import java.util.List;
 @Getter
 public class TrainerAccountBlockable extends AccountBlockable<TrainerHelper> {
 
-    @Autowired
-    public TrainerAccountBlockable(TelegramSender telegramSender,
-                                   ServiceKeeper serviceKeeper) {
+    private final AccountInterface<EditingInterfaceTrainer.EditingHelper> editingInterface;
+
+    private final AccountInterface<QuestionnaireInterface.CheckQuestionnaireHelper> questionnaireInterface;
+
+    private final AccountInterface<FAQInterface.FAQHelper> faqInterface;
+
+    private final AccountInterface<ReportCheckingInterface.ReportCheckingHelper> reportCheckingInterface;
+
+    private final AccountInterface<TrainingPlanInterface.TrainingPlanHelper> trainingPlanInterface;
+
+    public TrainerAccountBlockable(TelegramSender telegramSender, ServiceKeeper serviceKeeper,
+                                   EditingInterfaceTrainer editingInterface,
+                                   QuestionnaireInterface questionnaireInterface,
+                                   FAQInterface faqInterface,
+                                   ReportCheckingInterface reportCheckingInterface,
+                                   TrainingPlanInterface trainingPlanInterface) {
         super(telegramSender, serviceKeeper);
+        this.editingInterface = editingInterface;
+        this.questionnaireInterface = questionnaireInterface;
+        this.faqInterface = faqInterface;
+        this.reportCheckingInterface = reportCheckingInterface;
+        this.trainingPlanInterface = trainingPlanInterface;
+    }
+
+    @PostConstruct
+    private void setUp() {
+        this.editingInterface.setPrevBlockable(this);
+        this.questionnaireInterface.setPrevBlockable(this);
+        this.faqInterface.setPrevBlockable(this);
+        this.reportCheckingInterface.setPrevBlockable(this);
+        this.trainingPlanInterface.setPrevBlockable(this);
     }
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new TrainerHelper(
-                sender(), getServiceKeeper(), this));
-        ReplyKeyboardMarkup markup = markup();
-        for (KeyboardButton button : buttonsForTrainer()) {
-            markup.addRow(button);
-        }
-        return sender().sendResponse(new SendMessage(chatId, "Ты в личном кабинете")
-                .replyMarkup(markup));
+        signIn(chatId, new TrainerHelper(trainerService().findTrainerById(chatId)));
+        return msg(chatId, "Ты в личном кабинете", markup());
     }
 
     @Override
     public SendResponse process(Long chatId, Message message) {
         String txt = message.text();
-        TrainerHelper helper = helpers().get(chatId);
         if (txt != null) {
-            if (helper.isCheckingQuestionnaires()) {
-                return helper.checkQuestionnaire(chatId, message);
-            } else if (helper.isAnsweringFAQs()) {
-                return helper.answerFAQ(chatId, message);
-            } else if (helper.isAddingNewFaq()) {
-                return helper.newFaq(chatId, txt);
-            } else if (helper.isMakesTrainingPlan()) {
-                return helper.makeTrainingPlan(chatId, message);
-            } else if (helper.isAccountEditing()) {
-                return helper.editAccount(chatId, message);
-            } else if (helper.isCheckingReports()) {
-                return helper.checkReports(chatId, message);
-            }
             switch (txt) {
                 case "Редактировать аккаунт" -> {
-                    return helper.editAccount(chatId, message);
+                    return goTo(chatId, editingInterface);
                 }
                 case "Выйти из личного кабинета" -> {
-                    return goBack(chatId);
+                    return goToBack(chatId);
                 }
                 case "Проверить анкеты" -> {
-                    return helper.checkQuestionnaire(chatId, message);
+                    return goTo(chatId, questionnaireInterface);
                 }
-                case "Ответить на заданные вопросы" -> {
-                    return helper.answerFAQ(chatId, message);
-                }
-                case "Добавить новый FAQ" -> {
-                    return helper.newFaq(chatId, txt);
+                case "Раздел по популярным вопросам тренеру" -> {
+                    return goTo(chatId, faqInterface);
                 }
                 case "Тренировки. Расписание" -> {
-                    return helper.makeTrainingPlan(chatId, message);
+                    return goTo(chatId, trainingPlanInterface);
                 }
                 case "Проверить отчёты" -> {
-                    return helper.checkReports(chatId, message);
+                    return goTo(chatId, reportCheckingInterface);
                 }
             }
         }
         throw new NotValidDataException();
     }
 
-    private SendResponse goBack(Long chatId) {
-        helpers().remove(chatId);
-        AthleteAccountBlockable athleteAccount = (AthleteAccountBlockable) node().getPrevBlockable();
-        return athleteAccount.goToBack(chatId);
-    }
-
-    private List<KeyboardButton> buttonsForTrainer() {
+    @Override
+    public List<String> buttons() {
         return List.of(
-                new KeyboardButton("Проверить анкеты"),
-                new KeyboardButton("Ответить на заданные вопросы"),
-                new KeyboardButton("Добавить новый FAQ"),
-                new KeyboardButton("Тренировки. Расписание"),
-                new KeyboardButton("Проверить отчёты"));
+                "Проверить анкеты",
+                "Раздел по популярным вопросам тренеру",
+                "Тренировки. Расписание",
+                "Проверить отчёты");
     }
 }

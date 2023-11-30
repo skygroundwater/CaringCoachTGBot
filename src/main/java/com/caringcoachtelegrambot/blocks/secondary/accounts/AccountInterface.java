@@ -1,51 +1,45 @@
 package com.caringcoachtelegrambot.blocks.secondary.accounts;
 
-import com.caringcoachtelegrambot.services.*;
+import com.caringcoachtelegrambot.blocks.parents.SimpleBlockable;
+import com.caringcoachtelegrambot.blocks.secondary.helpers.accounthelpers.AccountHelper;
+import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
+import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
+import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Getter;
 
-import static com.caringcoachtelegrambot.utils.Constants.BACK;
+import java.util.List;
 
 @Getter
-public abstract class AccountInterface<H extends AccountHelper> {
+public abstract class AccountInterface<H extends AccountHelper> extends SimpleBlockable<H> {
 
-    private final H helper;
-
-    public AccountInterface(H helper) {
-        this.helper = helper;
+    public AccountInterface(TelegramSender sender, ServiceKeeper serviceKeeper) {
+        super(sender, serviceKeeper);
     }
 
-    public final TelegramSender sender() {
-        return helper.getSender();
+    @Override
+    public final SendResponse process(Long chatId, Message message) {
+        H helper = helpers().get(chatId);
+        if (helper.isWorking()) return work(chatId, message, helper);
+        else return switching(chatId, message, helper);
     }
 
-    public final OnlineTrainingService onlineTrainingService() {
-        return helper.getServiceKeeper().getOnlineTrainingService();
+    @Override
+    public final ReplyKeyboardMarkup markup() {
+        ReplyKeyboardMarkup markup = backMarkup();
+        buttons().forEach(markup::addRow);
+        return markup;
     }
 
-    public final QuestionnaireService questionnaireService() {
-        return helper.getServiceKeeper().getQuestionnaireService();
-    }
+    public abstract List<String> buttons();
 
-    public final FAQService faqService() {
-        return helper.getServiceKeeper().getFaqService();
-    }
+    protected abstract SendResponse switching(Long chatId, Message message, H helper);
 
-    public final TrainerService trainerService() {
-        return helper.getServiceKeeper().getTrainerService();
-    }
+    protected abstract SendResponse work(Long chatId, Message message, H helper);
 
-    public final AthleteService athleteService() {
-        return helper.getServiceKeeper().getAthleteService();
-    }
-
-    public final ReportService reportService() {
-        return helper.getServiceKeeper().getReportService();
-    }
-
-
-    public ReplyKeyboardMarkup backMarkup() {
-        return new ReplyKeyboardMarkup(BACK);
+    protected final SendResponse forcedStop(Long chatId) {
+        helpers().get(chatId).setWorking(false);
+        return uniqueStartBlockMessage(chatId);
     }
 }

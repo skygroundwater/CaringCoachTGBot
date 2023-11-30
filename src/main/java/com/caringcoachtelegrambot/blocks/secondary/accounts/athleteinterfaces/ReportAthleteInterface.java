@@ -1,12 +1,13 @@
-package com.caringcoachtelegrambot.blocks.secondary.accounts.athletehelper;
+package com.caringcoachtelegrambot.blocks.secondary.accounts.athleteinterfaces;
 
+import com.caringcoachtelegrambot.blocks.secondary.accounts.AccountInterface;
+import com.caringcoachtelegrambot.blocks.secondary.helpers.accounthelpers.AthleteHelper;
 import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.models.Athlete;
 import com.caringcoachtelegrambot.models.Report;
 import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,7 +18,7 @@ import java.util.List;
 import static com.caringcoachtelegrambot.utils.Constants.BACK;
 
 @Component
-public class ReportAthleteInterface extends AthleteAccountInterface<ReportAthleteInterface.ReportHelper> {
+public class ReportAthleteInterface extends AccountInterface<ReportAthleteInterface.ReportHelper> {
 
     public ReportAthleteInterface(TelegramSender sender,
                                   ServiceKeeper serviceKeeper) {
@@ -40,17 +41,23 @@ public class ReportAthleteInterface extends AthleteAccountInterface<ReportAthlet
 
         private String wishes;
 
+        public void clear() {
+            state = null;
+            emotion = null;
+            wishes = null;
+            weight = null;
+        }
+
     }
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new ReportHelper(athleteService().findById(chatId)));
-        return sender().sendResponse(new SendMessage(chatId, "Вы в блоке для отправки отчета")
-                .replyMarkup(markup()));
+        signIn(chatId, new ReportHelper(athleteService().findById(chatId)));
+        return msg(chatId, "Вы в блоке для отправки отчета", markup());
     }
 
     @Override
-    protected List<String> buttons() {
+    public List<String> buttons() {
         return List.of("Начать отправку отчета");
     }
 
@@ -70,7 +77,7 @@ public class ReportAthleteInterface extends AthleteAccountInterface<ReportAthlet
 
     private SendResponse execute(Long chatId, ReportHelper helper) {
         helper.setWorking(true);
-        return intermediateMsg(chatId, "Расскажи о своем общем состоянии в течении прошедшей недели");
+        return msg(chatId, "Расскажи о своем общем состоянии в течении прошедшей недели", backMarkup());
     }
 
     @Override
@@ -93,14 +100,15 @@ public class ReportAthleteInterface extends AthleteAccountInterface<ReportAthlet
 
     private SendResponse saveReport(Long chatId, Message message, ReportHelper helper) {
         helper.setWishes(message.text());
-        reportService().post(Report.builder()
+        reportService().post(
+                Report.builder()
                 .athlete(helper.getAthlete())
                 .weight(helper.weight)
                 .wishes(helper.wishes)
                 .emotion(helper.emotion)
                 .state(helper.state)
                 .build());
-        helpers().put(chatId, new ReportHelper(athleteService().findById(chatId)));
+        helpers().get(chatId).clear();
         return uniqueStartBlockMessage(chatId);
     }
 }

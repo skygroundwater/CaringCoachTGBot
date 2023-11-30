@@ -6,13 +6,12 @@ import com.caringcoachtelegrambot.exceptions.NotValidDataException;
 import com.caringcoachtelegrambot.services.keeper.ServiceKeeper;
 import com.caringcoachtelegrambot.utils.TelegramSender;
 import com.pengrad.telegrambot.model.Message;
-import com.pengrad.telegrambot.model.request.KeyboardButton;
-import com.pengrad.telegrambot.model.request.ReplyKeyboardMarkup;
-import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 public class MeetingBlockable extends SimpleBlockable<MeetingBlockable.MeetingHelper> {
@@ -49,28 +48,27 @@ public class MeetingBlockable extends SimpleBlockable<MeetingBlockable.MeetingHe
 
     @Override
     public SendResponse uniqueStartBlockMessage(Long chatId) {
-        helpers().put(chatId, new MeetingHelper());
-        return sender().sendResponse(new SendMessage(chatId, "Знакомство")
-                .replyMarkup(markup()));
+        signIn(chatId, new MeetingHelper());
+        return msg(chatId, "Знакомство", markup());
     }
 
     @Override
-    public ReplyKeyboardMarkup markup() {
-        return backMarkup().addRow(
-                new KeyboardButton("Обо мне"),
-                new KeyboardButton("Мои регалии"))
-                .addRow("тебе нужна работа со мной если...");
+    public List<String> buttons() {
+        return List.of("Обо мне",
+                "Мои регалии",
+                "тебе нужна работа со мной если...");
     }
 
+
     private SendResponse about(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, trainerService().getTrainer().getAbout()));
+        return msg(chatId, "Функционал дорабатывается");
     }
 
     private SendResponse cause(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, trainerService().getTrainer().getCause()));
+        return msg(chatId, "Функционал дорабатывается");
     }
 
     private SendResponse regalia(Long chatId) {
-        return sender().sendResponse(new SendMessage(chatId, "Мои регалии"));
+        return msg(chatId, "Функционал дорабатывается");
     }
 }
